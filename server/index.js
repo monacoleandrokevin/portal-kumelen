@@ -39,13 +39,14 @@ app.post("/auth/google", async (req, res) => {
     const email = payload.email;
     const name = payload.name;
 
+    // Validar dominio permitido
     if (!email.endsWith(`@${process.env.PERMITIDO_DOMINIO}`)) {
       return res
         .status(403)
         .json({ message: "Acceso denegado. Solo correos institucionales." });
     }
 
-    // Podrías buscar o crear al usuario acá
+    // 👇 Lógica de guardado en MongoDB
     let usuario = await User.findOne({ email });
 
     if (!usuario) {
@@ -64,7 +65,9 @@ app.post("/auth/google", async (req, res) => {
       sector: usuario.sector,
     });
   } catch (error) {
-    return res.status(401).json({ message: "Token inválido" });
+    return res
+      .status(401)
+      .json({ message: "Token inválido", error: error.message });
   }
 });
 
