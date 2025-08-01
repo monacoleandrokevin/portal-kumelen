@@ -1,4 +1,4 @@
-// middleware/checkAdmin.js
+// server/middleware/checkAdmin.js
 import { OAuth2Client } from "google-auth-library";
 import { User } from "../models/User.js";
 
@@ -23,7 +23,7 @@ export const checkAdmin = async (req, res, next) => {
       return res.status(403).json({ message: "Acceso denegado" });
     }
 
-    req.user = user; // Lo dejamos disponible por si se necesita
+    req.user = user;
     next();
   } catch (error) {
     return res.status(401).json({ message: "Token inválido" });

@@ -1,6 +1,7 @@
 // middleware/checkAdmin.js
 import { OAuth2Client } from "google-auth-library";
 import { User } from "../models/User.js";
+import { checkAdmin } from "./middleware/checkAdmin.js";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 

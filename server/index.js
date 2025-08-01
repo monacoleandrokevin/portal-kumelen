@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { OAuth2Client } from "google-auth-library";
 import { User } from "./models/User.js";
+import { checkAdmin } from "./middleware/checkAdmin.js";
 
 dotenv.config();
 
@@ -68,6 +69,15 @@ app.post("/auth/google", async (req, res) => {
     return res
       .status(401)
       .json({ message: "Token inválido", error: error.message });
+  }
+});
+
+app.get("/users", checkAdmin, async (req, res) => {
+  try {
+    const usuarios = await User.find({}, "-__v -createdAt -updatedAt");
+    res.json(usuarios);
+  } catch (err) {
+    res.status(500).json({ message: "Error al obtener usuarios" });
   }
 });
 
