@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { OAuth2Client } from "google-auth-library";
 import { User } from "./models/User.js";
 import { checkAdmin } from "./middleware/checkAdmin.js";
+import { Autorizado } from "./models/Autorizado.js";
 
 dotenv.config();
 
@@ -47,7 +48,15 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "Acceso denegado. Solo correos institucionales." });
     }
 
-    // 👇 Lógica de guardado en MongoDB
+    // Validar que esté en la lista blanca (autorizados)
+    const autorizado = await Autorizado.findOne({ email });
+    if (!autorizado) {
+      return res
+        .status(403)
+        .json({ message: "Este correo no está habilitado para ingresar." });
+    }
+
+    // Buscar o crear el usuario
     let usuario = await User.findOne({ email });
 
     if (!usuario) {
