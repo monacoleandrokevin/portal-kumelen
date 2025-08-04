@@ -2,7 +2,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/landing.scss";
 import { GoogleLogin } from "@react-oauth/google";
 
-function Home() {
+function Landing() {
   const handleLogin = (credentialResponse) => {
     // Lógica de login
     console.log(credentialResponse);
@@ -45,4 +45,4 @@ function Home() {
   );
 }
 
-export default Home;
+export default Landing;
