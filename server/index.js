@@ -29,7 +29,13 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 app.use("/users", usersRoutes);
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["https://portal-kumelen.vercel.app"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 app.post("/auth/google", async (req, res) => {
