@@ -90,4 +90,70 @@ app.get("/users", checkAdmin, async (req, res) => {
   }
 });
 
+app.patch("/users/:id/rol", checkAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nuevoRol } = req.body;
+
+    if (!["admin", "empleado"].includes(nuevoRol)) {
+      return res.status(400).json({ message: "Rol inválido" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { rol: nuevoRol },
+      { new: true }
+    );
+    if (!user)
+      return res.status(404).json({ message: "Usuario no encontrado" });
+
+    res.json({ message: "Rol actualizado", usuario: user });
+  } catch (err) {
+    res.status(500).json({ message: "Error al actualizar rol" });
+  }
+});
+
+app.post("/autorizados", checkAdmin, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.endsWith(`@${process.env.PERMITIDO_DOMINIO}`)) {
+      return res
+        .status(400)
+        .json({ message: "Email inválido o fuera de dominio" });
+    }
+
+    const yaExiste = await Autorizado.findOne({ email });
+    if (yaExiste) {
+      return res.status(409).json({ message: "Este email ya está autorizado" });
+    }
+
+    const nuevo = await Autorizado.create({ email });
+    res.status(201).json({ message: "Autorizado creado", autorizado: nuevo });
+  } catch (err) {
+    res.status(500).json({ message: "Error al crear autorizado" });
+  }
+});
+
+app.delete("/autorizados/:id", checkAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const eliminado = await Autorizado.findByIdAndDelete(id);
+    if (!eliminado) return res.status(404).json({ message: "No encontrado" });
+
+    res.json({ message: "Autorizado eliminado", eliminado });
+  } catch (err) {
+    res.status(500).json({ message: "Error al eliminar autorizado" });
+  }
+});
+
+app.get("/autorizados", checkAdmin, async (req, res) => {
+  try {
+    const lista = await Autorizado.find({}, "-__v");
+    res.json(lista);
+  } catch (err) {
+    res.status(500).json({ message: "Error al obtener autorizados" });
+  }
+});
+
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));

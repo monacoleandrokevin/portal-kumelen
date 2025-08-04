@@ -3,27 +3,31 @@ import axios from "axios";
 
 const Admin = () => {
   const [usuarios, setUsuarios] = useState([]);
+  const [autorizados, setAutorizados] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("google_token");
-
-    if (!storedToken) {
+    const token = localStorage.getItem("google_token");
+    if (!token) {
       setError("No hay token. Iniciá sesión.");
       return;
     }
 
+    // Cargar usuarios
     axios
       .get(`${import.meta.env.VITE_API_URL}/users`, {
-        headers: {
-          Authorization: `Bearer ${storedToken}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setUsuarios(res.data))
-      .catch((err) => {
-        console.error(err);
-        setError("Acceso denegado o error en la carga.");
-      });
+      .catch(() => console.error("Error al obtener autorizados"));
+
+    // Cargar autorizados
+    axios
+      .get(`${import.meta.env.VITE_API_URL}/autorizados`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setAutorizados(res.data))
+      .catch((err) => console.error("Error al obtener autorizados", err));
   }, []);
 
   if (error)
@@ -52,6 +56,22 @@ const Admin = () => {
               <td>{user.email}</td>
               <td>{user.rol}</td>
               <td>{user.sector}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h3 className="mt-5">Correos autorizados</h3>
+      <table className="table table-bordered mt-3">
+        <thead>
+          <tr>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          {autorizados.map((item) => (
+            <tr key={item._id}>
+              <td>{item.email}</td>
             </tr>
           ))}
         </tbody>
