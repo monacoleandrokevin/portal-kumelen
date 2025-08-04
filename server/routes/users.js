@@ -1,32 +1,61 @@
-// middleware/checkAdmin.js
-import { OAuth2Client } from "google-auth-library";
+import express from "express";
 import { User } from "../models/User.js";
-import { checkAdmin } from "./middleware/checkAdmin.js";
+import { checkAdmin } from "../middleware/checkAdmin.js";
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const router = express.Router();
 
-export const checkAdmin = async (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
+// GET /users → Lista todos los usuarios
+router.get("/", checkAdmin, async (req, res) => {
+  try {
+    const usuarios = await User.find();
+    res.json(usuarios);
+  } catch (err) {
+    res.status(500).json({ message: "Error al obtener usuarios" });
+  }
+});
 
-  if (!token) return res.status(401).json({ message: "Token faltante" });
+// PATCH /users/:id/rol → Cambia el rol (admin/empleado)
+router.patch("/:id/rol", checkAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { nuevoRol } = req.body;
 
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    const usuario = await User.findByIdAndUpdate(
+      id,
+      { rol: nuevoRol },
+      { new: true }
+    );
 
-    const payload = ticket.getPayload();
-    const email = payload.email;
-
-    const user = await User.findOne({ email });
-    if (!user || user.rol !== "admin") {
-      return res.status(403).json({ message: "Acceso denegado" });
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    req.user = user; // Lo dejamos disponible por si se necesita
-    next();
-  } catch (error) {
-    return res.status(401).json({ message: "Token inválido" });
+    res.json({ message: "Rol actualizado", usuario });
+  } catch (err) {
+    res.status(500).json({ message: "Error al actualizar rol" });
   }
-};
+});
+
+// PATCH /users/:id/vinculos → Actualiza los vínculos laborales
+router.patch("/:id/vinculos", checkAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { vinculos } = req.body;
+
+  try {
+    const usuario = await User.findByIdAndUpdate(
+      id,
+      { vinculos },
+      { new: true }
+    );
+
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    res.json({ message: "Vínculos actualizados", usuario });
+  } catch (err) {
+    res.status(500).json({ message: "Error al actualizar vínculos" });
+  }
+});
+
+export default router;

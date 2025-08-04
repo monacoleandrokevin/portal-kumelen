@@ -5,6 +5,7 @@ import { OAuth2Client } from "google-auth-library";
 import { User } from "./models/User.js";
 import { checkAdmin } from "./middleware/checkAdmin.js";
 import { Autorizado } from "./models/Autorizado.js";
+import usersRoutes from "./routes/users.js";
 
 dotenv.config();
 
@@ -25,6 +26,8 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+app.use("/users", usersRoutes);
 
 app.use(cors());
 app.use(express.json());
@@ -110,6 +113,34 @@ app.patch("/users/:id/rol", checkAdmin, async (req, res) => {
     res.json({ message: "Rol actualizado", usuario: user });
   } catch (err) {
     res.status(500).json({ message: "Error al actualizar rol" });
+  }
+});
+
+app.patch("/users/:id/vinculos", checkAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nuevosVinculos } = req.body;
+
+    if (!Array.isArray(nuevosVinculos)) {
+      return res
+        .status(400)
+        .json({ message: "El formato de vínculos es inválido" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      {
+        vinculos: nuevosVinculos,
+      },
+      { new: true }
+    );
+
+    if (!user)
+      return res.status(404).json({ message: "Usuario no encontrado" });
+
+    res.json({ message: "Vínculos actualizados", usuario: user });
+  } catch (err) {
+    res.status(500).json({ message: "Error al actualizar vínculos" });
   }
 });
 
