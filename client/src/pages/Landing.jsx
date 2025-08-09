@@ -1,11 +1,34 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/landing.scss";
 import { GoogleLogin } from "@react-oauth/google";
+import axios from "axios";
 
 function Landing() {
-  const handleLogin = (credentialResponse) => {
-    // Lógica de login
-    console.log(credentialResponse);
+  const handleLogin = async (credentialResponse) => {
+    try {
+      const token = credentialResponse.credential;
+      // Guardamos el token para llamadas futuras
+      localStorage.setItem("google_token", token);
+
+      // Autenticamos contra tu API
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/auth/google`,
+        { token }
+      );
+
+      // (Opcional) podés guardar info del usuario
+      localStorage.setItem("usuario_nombre", res.data.nombre);
+      localStorage.setItem("usuario_rol", res.data.rol);
+
+      // Redirigimos: si es admin → /admin, si no → /
+      if (res.data.rol === "admin") {
+        window.location.href = "/admin";
+      } else {
+        window.location.href = "/";
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Error al autenticar");
+    }
   };
 
   return (
