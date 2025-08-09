@@ -56,7 +56,6 @@ function Landing() {
           <GoogleLogin
             onSuccess={handleLogin}
             onError={() => alert("Error en el login")}
-            useOneTap
           />
         </div>
       </header>
