@@ -6,6 +6,7 @@ import { User } from "./models/User.js";
 import { checkAdmin } from "./middleware/checkAdmin.js";
 import { Autorizado } from "./models/Autorizado.js";
 import usersRoutes from "./routes/users.js";
+import axios from "axios";
 
 dotenv.config();
 
