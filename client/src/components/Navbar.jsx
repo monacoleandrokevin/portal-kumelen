@@ -8,6 +8,8 @@ const Navbar = () => {
     navigate("/");
   };
 
+  const rol = localStorage.getItem("usuario_rol");
+
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark px-4">
       <Link className="navbar-brand" to="/">
@@ -21,11 +23,13 @@ const Navbar = () => {
               Inicio
             </Link>
           </li>
-          <li className="nav-item">
-            <Link className="nav-link" to="/admin">
-              Panel Admin
-            </Link>
-          </li>
+          {rol === "admin" && (
+            <li className="nav-item">
+              <a className="nav-link" href="/admin">
+                Administración
+              </a>
+            </li>
+          )}
         </ul>
         <button className="btn btn-outline-light" onClick={handleLogout}>
           Cerrar sesión
