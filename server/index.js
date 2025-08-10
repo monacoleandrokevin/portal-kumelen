@@ -26,8 +26,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
 app.use(
   cors({
     origin: ["https://portal-kumelen.vercel.app"],
@@ -36,6 +34,8 @@ app.use(
 );
 
 app.use(express.json());
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 app.use("/users", usersRoutes);
 
