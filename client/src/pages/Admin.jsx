@@ -14,6 +14,7 @@ const Admin = () => {
   const [nuevoEdificio, setNuevoEdificio] = useState("");
   const [nuevoNivel, setNuevoNivel] = useState([]);
   const [nuevoRol, setNuevoRol] = useState("");
+
   const nivelesDisponibles = ["Maternal", "Inicial", "Primario", "Secundario"];
   const edificiosDisponibles = [
     "Parque de la Biodiversidad",
@@ -21,20 +22,48 @@ const Admin = () => {
     "San Carlos - Secundario",
   ];
 
-  const token = localStorage.getItem("google_token");
+  // Prioriza el ID token de Google (JWT). Si no existe, usa access_token (por si acaso).
+  const token =
+    localStorage.getItem("google_id_token") ||
+    localStorage.getItem("google_access_token") ||
+    localStorage.getItem("google_token"); // fallback por si quedaba viejo
+
+  const getAuthHeaders = () => ({
+    Authorization: `Bearer ${token}`,
+  });
+
+  const manejar401 = () => {
+    setError(
+      "Sesión expirada o inválida. Por favor, iniciá sesión nuevamente."
+    );
+    // opcional: limpiar tokens
+    // localStorage.removeItem("google_id_token");
+    // localStorage.removeItem("google_access_token");
+    setTimeout(() => (window.location.href = "/"), 1200);
+  };
 
   const cargarListas = useCallback(() => {
+    // /users
     axios
       .get(`${import.meta.env.VITE_API_URL}/users`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
       })
-      .then((res) => setUsuarios(res.data));
+      .then((res) => setUsuarios(res.data))
+      .catch((err) => {
+        if (err?.response?.status === 401) manejar401();
+        else setMensaje("Error al obtener usuarios.");
+      });
 
+    // /autorizados
     axios
       .get(`${import.meta.env.VITE_API_URL}/autorizados`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
       })
-      .then((res) => setAutorizados(res.data));
+      .then((res) => setAutorizados(res.data))
+      .catch((err) => {
+        if (err?.response?.status === 401) manejar401();
+        else setMensaje("Error al obtener autorizados.");
+      });
   }, [token]);
 
   useEffect(() => {
@@ -48,14 +77,15 @@ const Admin = () => {
   const eliminarAutorizado = (id) => {
     axios
       .delete(`${import.meta.env.VITE_API_URL}/autorizados/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
       })
       .then(() => {
         setMensaje("Correo eliminado.");
         cargarListas();
       })
-      .catch(() => {
-        setMensaje("Error al eliminar correo.");
+      .catch((err) => {
+        if (err?.response?.status === 401) manejar401();
+        else setMensaje("Error al eliminar correo.");
       });
   };
 
@@ -65,19 +95,16 @@ const Admin = () => {
     axios
       .patch(
         `${import.meta.env.VITE_API_URL}/users/${id}/rol`,
-        {
-          nuevoRol,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { nuevoRol },
+        { headers: getAuthHeaders() }
       )
       .then(() => {
         setMensaje(`Rol cambiado a ${nuevoRol}.`);
         cargarListas();
       })
-      .catch(() => {
-        setMensaje("Error al cambiar rol.");
+      .catch((err) => {
+        if (err?.response?.status === 401) manejar401();
+        else setMensaje("Error al cambiar rol.");
       });
   };
 
@@ -89,9 +116,7 @@ const Admin = () => {
       .post(
         `${import.meta.env.VITE_API_URL}/autorizados`,
         { email: nuevoEmail },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: getAuthHeaders() }
       )
       .then(() => {
         setMensaje("Correo autorizado correctamente.");
@@ -99,9 +124,14 @@ const Admin = () => {
         cargarListas();
       })
       .catch((err) => {
-        setMensaje(err.response?.data?.message || "Error al autorizar correo");
+        if (err?.response?.status === 401) manejar401();
+        else
+          setMensaje(
+            err.response?.data?.message || "Error al autorizar correo"
+          );
       });
   };
+
   const abrirModal = (user) => {
     setUsuarioActivo(user);
     setVinculosTemp([...user.vinculos]);
@@ -115,21 +145,19 @@ const Admin = () => {
     axios
       .patch(
         `${import.meta.env.VITE_API_URL}/users/${usuarioActivo._id}/vinculos`,
-        { vinculos: vinculosTemp },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { nuevosVinculos: vinculosTemp }, // <- lo que espera el backend
+        { headers: getAuthHeaders() }
       )
       .then(() => {
         setMensaje("Vínculos actualizados correctamente.");
         cargarListas();
-        // Cerramos el modal
         const modalEl = document.getElementById("modalVinculos");
         const modal = bootstrap.Modal.getInstance(modalEl);
         modal.hide();
       })
-      .catch(() => {
-        setMensaje("Error al guardar los vínculos.");
+      .catch((err) => {
+        if (err?.response?.status === 401) manejar401();
+        else setMensaje("Error al guardar los vínculos.");
       });
   };
 
@@ -234,6 +262,7 @@ const Admin = () => {
         </div>
         {mensaje && <div className="mt-2 alert alert-info">{mensaje}</div>}
       </form>
+
       <div className="modal fade" id="modalVinculos" tabIndex="-1">
         <div className="modal-dialog modal-lg">
           <div className="modal-content">

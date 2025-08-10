@@ -1,39 +1,48 @@
 import "../styles/landing.scss";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
+import { useState } from "react";
 
 function Landing() {
+  const [loading, setLoading] = useState(false);
+
   const doLogin = async (accessToken) => {
     try {
-      // guardo el token *por si* quisieras usar APIs de Google desde el front
-      localStorage.setItem("google_access_token", accessToken);
-      console.log("access_token length:", (accessToken || "").length);
+      setLoading(true);
 
-      const res = await axios.post(
+      // Guardamos el token de Google para usarlo después como Bearer
+      localStorage.setItem("google_access_token", accessToken);
+
+      // Autenticamos contra tu backend (acepta access_token)
+      const { data } = await axios.post(
         `${import.meta.env.VITE_API_URL}/auth/google`,
-        { access_token: accessToken } // 👈 ahora mandamos access_token
+        { access_token: accessToken }
       );
 
-      localStorage.setItem("google_token", "ok"); // marcador de sesión
-      localStorage.setItem("usuario_nombre", res.data.nombre);
-      localStorage.setItem("usuario_rol", res.data.rol);
+      // Persistimos datos útiles
+      localStorage.setItem("usuario_nombre", data.nombre);
+      localStorage.setItem("usuario_rol", data.rol);
 
-      window.location.href = res.data.rol === "admin" ? "/admin" : "/inicio";
+      // Redirigimos por rol
+      window.location.href = data.rol === "admin" ? "/admin" : "/inicio";
     } catch (err) {
-      const m = err.response?.data?.message || "Error al autenticar";
-      const d = err.response?.data?.error
+      const msg = err.response?.data?.message || "Error al autenticar";
+      const det = err.response?.data?.error
         ? `\nDetalle: ${JSON.stringify(err.response.data.error)}`
         : "";
-      alert(m + d);
+      alert(msg + det);
+      // ante error, limpiamos el access_token local
+      localStorage.removeItem("google_access_token");
+    } finally {
+      setLoading(false);
     }
   };
 
   const login = useGoogleLogin({
-    // popup sin redirección
     onSuccess: (t) => doLogin(t.access_token),
     onError: () => alert("Error en el login"),
-    scope: "openid email profile", // nos garantiza email/nombre en userinfo
-    flow: "implicit", // popup
+    scope: "openid email profile",
+    flow: "implicit", // popup (entrega access_token)
   });
 
   return (
@@ -55,12 +64,18 @@ function Landing() {
                 </h1>
               </div>
 
-              {/* Botón custom, 100% control de estilo */}
               <button
                 className="btn btn-dark w-100 py-2 login-google-btn"
                 onClick={() => login()}
+                disabled={loading}
               >
-                <span className="me-2">🔒</span> Iniciar sesión con Google
+                {loading ? (
+                  "Iniciando..."
+                ) : (
+                  <>
+                    <span className="me-2">🔒</span> Iniciar sesión con Google
+                  </>
+                )}
               </button>
 
               <p className="text-muted small mt-4 mb-0 text-center">
