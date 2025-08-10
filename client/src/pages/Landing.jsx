@@ -1,5 +1,5 @@
 import "bootstrap/dist/css/bootstrap.min.css";
-import "./styles/landing.scss";
+import "../styles/landing.scss";
 import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 
