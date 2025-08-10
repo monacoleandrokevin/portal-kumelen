@@ -36,8 +36,7 @@ function Landing() {
                   src="https://res.cloudinary.com/dzxsbydje/image/upload/v1754348808/logo_kumelen_centrado_-_fondo_transparente_uuc5wb.png"
                   alt="Escuela Kumelen"
                 />
-                <h1 className="h4 mt-3 mb-1">Portal Kumelen</h1>
-                <p className="text-muted m-0">
+                <p className="h4 mt-3 mb-1">
                   Accedé con tu cuenta institucional
                 </p>
               </div>
