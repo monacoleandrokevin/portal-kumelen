@@ -47,7 +47,7 @@ app.post("/auth/google", async (req, res) => {
 
     if (token) {
       console.log(
-        "→ Verificando ID token (credential) contra",
+        "→ Verificando ID token contra",
         process.env.GOOGLE_CLIENT_ID
       );
       const ticket = await client.verifyIdToken({
@@ -86,7 +86,7 @@ app.post("/auth/google", async (req, res) => {
       process.env.PERMITIDO_DOMINIO
     );
 
-    // Dominio
+    // dominio
     if (!email.endsWith(`@${process.env.PERMITIDO_DOMINIO}`)) {
       console.warn("× Dominio no permitido:", email);
       return res
@@ -94,7 +94,7 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "Acceso denegado. Solo correos institucionales." });
     }
 
-    // Lista blanca
+    // lista blanca
     const autorizado = await Autorizado.findOne({ email });
     if (!autorizado) {
       console.warn("× No está en AUTORIZADOS:", email);
@@ -103,7 +103,7 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "Este correo no está habilitado para ingresar." });
     }
 
-    // Usuario
+    // usuario
     let usuario = await User.findOne({ email });
     if (!usuario) {
       usuario = await User.create({

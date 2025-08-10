@@ -20,7 +20,11 @@ function Landing() {
 
       window.location.href = res.data.rol === "admin" ? "/admin" : "/inicio";
     } catch (err) {
-      alert(err.response?.data?.message || "Error al autenticar");
+      const m = err.response?.data?.message || "Error al autenticar";
+      const d = err.response?.data?.error
+        ? `\nDetalle: ${JSON.stringify(err.response.data.error)}`
+        : "";
+      alert(m + d);
     }
   };
 
