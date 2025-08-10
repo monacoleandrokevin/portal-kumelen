@@ -15,3 +15,66 @@
     margin-top: 1rem;
   }
 }
+
+/* Paleta basada en tu logo */
+$verde: #058a59;
+$marron: #6a3c10;
+$naranja: #f28b00;
+$gris-bg: #0f1113; // fondo oscuro tipo coder
+$gris-200: #f5f5f5;
+
+.landing {
+  background: $gris-bg;
+  color: #fff;
+
+  .login-card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 28px;
+
+    .brand {
+      text-align: center;
+
+      img {
+        height: 64px;
+        object-fit: contain;
+      }
+
+      h1 {
+        color: #fff;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+
+      p {
+        color: rgba(255, 255, 255, 0.7);
+      }
+    }
+
+    .btn-primary {
+      background: $verde;
+      border-color: $verde;
+
+      &:hover {
+        filter: brightness(1.05);
+      }
+    }
+  }
+
+  /* Panel de imagen derecha en desktop */
+  .landing-image {
+    background-image: url("https://res.cloudinary.com/demo/image/upload/w_1600,c_fill,q_auto,f_auto/v1690900000/abstract-bokeh.jpg");
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.85);
+  }
+}
+
+/* Ajustes tipográficos responsivos */
+@media (min-width: 768px) {
+  .landing .login-card .brand h1 {
+    font-size: 1.6rem;
+  }
+}
