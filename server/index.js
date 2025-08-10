@@ -45,6 +45,9 @@ app.post("/auth/google", async (req, res) => {
 
     if (token) {
       // Flujo anterior: ID token
+      console.log("Token recibido:", token);
+      console.log("GOOGLE_CLIENT_ID backend:", process.env.GOOGLE_CLIENT_ID);
+
       const ticket = await client.verifyIdToken({
         idToken: token,
         audience: process.env.GOOGLE_CLIENT_ID,
