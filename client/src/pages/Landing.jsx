@@ -39,10 +39,13 @@ function Landing() {
                 </h1>
               </div>
 
-              <div className="d-grid gap-3">
+              <div className="d-flex justify-content-center">
                 <GoogleLogin
                   onSuccess={handleLogin}
                   onError={() => alert("Error en el login")}
+                  theme="filled_black" // 👈 lo oscurecemos acá
+                  size="large"
+                  shape="pill"
                 />
               </div>
 
