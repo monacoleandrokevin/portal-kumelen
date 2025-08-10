@@ -18,7 +18,7 @@ function Landing() {
       localStorage.setItem("usuario_rol", res.data.rol);
 
       if (res.data.rol === "admin") window.location.href = "/admin";
-      else window.location.href = "/";
+      else window.location.href = "/inicio";
     } catch (err) {
       alert(err.response?.data?.message || "Error al autenticar");
     }
