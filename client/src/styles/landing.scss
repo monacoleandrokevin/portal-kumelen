@@ -58,6 +58,19 @@ $fondo: #0f1113; // oscuro tipo coder
   }
 }
 
+.login-card {
+  .google-login-container {
+    display: flex;
+    justify-content: center;
+
+    // Bordes redondeados y sin fondo extra
+    iframe {
+      border-radius: 8px; // más suave
+      overflow: hidden; // evita esquinas blancas
+    }
+  }
+}
+
 /* Tipografía un poco más grande en desktop */
 @media (min-width: 768px) {
   .landing .login-card h1 {
