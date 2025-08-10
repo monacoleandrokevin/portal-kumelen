@@ -29,14 +29,16 @@ function Landing() {
           {/* Columna Login */}
           <div className="col-12 col-md-6 d-flex align-items-center justify-content-center p-4 p-md-5">
             <div className="login-card w-100" style={{ maxWidth: 420 }}>
-              <div className="brand mb-4 text-center">
-                <img
-                  src="https://res.cloudinary.com/dzxsbydje/image/upload/v1754348808/logo_kumelen_centrado_-_fondo_transparente_uuc5wb.png"
-                  alt="Escuela Kumelen"
-                />
-                <h1 className="h4 mt-3 mb-1">
+              <div className="brand mb-4">
+                <div className="logo-circle">
+                  <img
+                    src="https://res.cloudinary.com/dzxsbydje/image/upload/v1754348808/logo_kumelen_centrado_-_fondo_transparente_uuc5wb.png"
+                    alt="Escuela Kumelen"
+                  />
+                </div>
+                <p className="h4 mt-3 mb-1">
                   Accedé con tu cuenta institucional
-                </h1>
+                </p>
               </div>
 
               <div className="google-login-container">

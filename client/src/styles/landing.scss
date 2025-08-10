@@ -69,6 +69,27 @@ $fondo: #0f1113; // oscuro tipo coder
       overflow: hidden; // evita esquinas blancas
     }
   }
+  .brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .logo-circle {
+      background-color: white; /* Fondo blanco */
+      border-radius: 50%; /* Forma circular */
+      padding: 10px; /* Espaciado alrededor del logo */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px; /* Tamaño del círculo */
+      height: 80px;
+
+      img {
+        max-width: 60%; /* Ajusta el logo dentro del círculo */
+        height: auto;
+      }
+    }
+  }
 }
 
 /* Tipografía un poco más grande en desktop */
