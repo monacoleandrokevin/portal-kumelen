@@ -1,4 +1,4 @@
-import "bootstrap/dist/css/bootstrap.min.css";
+// import "bootstrap/dist/css/bootstrap.min.css";  // <- solo si NO está global
 import "../styles/landing.scss";
 import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
@@ -17,8 +17,7 @@ function Landing() {
       localStorage.setItem("usuario_nombre", res.data.nombre);
       localStorage.setItem("usuario_rol", res.data.rol);
 
-      if (res.data.rol === "admin") window.location.href = "/admin";
-      else window.location.href = "/inicio";
+      window.location.href = res.data.rol === "admin" ? "/admin" : "/inicio";
     } catch (err) {
       alert(err.response?.data?.message || "Error al autenticar");
     }
@@ -31,14 +30,14 @@ function Landing() {
           {/* Columna Login */}
           <div className="col-12 col-md-6 d-flex align-items-center justify-content-center p-4 p-md-5">
             <div className="login-card w-100" style={{ maxWidth: 420 }}>
-              <div className="brand mb-4">
+              <div className="brand mb-4 text-center">
                 <img
                   src="https://res.cloudinary.com/dzxsbydje/image/upload/v1754348808/logo_kumelen_centrado_-_fondo_transparente_uuc5wb.png"
                   alt="Escuela Kumelen"
                 />
-                <p className="h4 mt-3 mb-1">
+                <h1 className="h4 mt-3 mb-1">
                   Accedé con tu cuenta institucional
-                </p>
+                </h1>
               </div>
 
               <div className="d-grid gap-3">
@@ -48,7 +47,7 @@ function Landing() {
                 />
               </div>
 
-              <p className="text-muted small mt-4 mb-0">
+              <p className="text-muted small mt-4 mb-0 text-center">
                 © {new Date().getFullYear()} Escuela Kumelen
               </p>
             </div>
