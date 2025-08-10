@@ -1,4 +1,3 @@
-// import "bootstrap/dist/css/bootstrap.min.css";  // <- solo si NO está global
 import "../styles/landing.scss";
 import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
