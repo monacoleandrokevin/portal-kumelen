@@ -39,60 +39,82 @@ app.use(express.json());
 app.use("/users", usersRoutes);
 
 app.post("/auth/google", async (req, res) => {
+  const { token, access_token } = req.body;
+  console.log("POST /auth/google body keys:", Object.keys(req.body));
+
   try {
-    const { token, access_token } = req.body;
     let email, name;
 
     if (token) {
-      // Flujo anterior: ID token
-      console.log("Token recibido:", token);
-      console.log("GOOGLE_CLIENT_ID backend:", process.env.GOOGLE_CLIENT_ID);
-
+      console.log(
+        "→ Verificando ID token (credential) contra",
+        process.env.GOOGLE_CLIENT_ID
+      );
       const ticket = await client.verifyIdToken({
         idToken: token,
         audience: process.env.GOOGLE_CLIENT_ID,
       });
       const payload = ticket.getPayload();
-      email = payload.email;
-      name = payload.name;
+      email = payload?.email;
+      name = payload?.name;
     } else if (access_token) {
-      // Nuevo: usamos el access_token para leer userinfo desde Google
+      console.log("→ Usando access_token para /userinfo");
       const { data } = await axios.get(
         "https://www.googleapis.com/oauth2/v3/userinfo",
         { headers: { Authorization: `Bearer ${access_token}` } }
       );
-      email = data.email;
-      name = data.name || data.given_name || "";
-      if (!email)
-        return res
-          .status(401)
-          .json({ message: "No se pudo obtener el email de Google" });
+      email = data?.email;
+      name = data?.name || data?.given_name || "";
     } else {
-      return res.status(400).json({ message: "Falta token de Google" });
+      console.warn("× Falta token en body");
+      return res
+        .status(400)
+        .json({ message: "Falta token de Google (token o access_token)" });
     }
 
-    // Validación dominio y lista blanca
+    if (!email) {
+      console.warn("× No llegó email desde Google");
+      return res
+        .status(401)
+        .json({ message: "No se pudo obtener el email desde Google" });
+    }
+
+    console.log(
+      "✓ Google OK →",
+      email,
+      "| dominio permitido:",
+      process.env.PERMITIDO_DOMINIO
+    );
+
+    // Dominio
     if (!email.endsWith(`@${process.env.PERMITIDO_DOMINIO}`)) {
+      console.warn("× Dominio no permitido:", email);
       return res
         .status(403)
         .json({ message: "Acceso denegado. Solo correos institucionales." });
     }
+
+    // Lista blanca
     const autorizado = await Autorizado.findOne({ email });
     if (!autorizado) {
+      console.warn("× No está en AUTORIZADOS:", email);
       return res
         .status(403)
         .json({ message: "Este correo no está habilitado para ingresar." });
     }
 
-    // Buscar / crear usuario
+    // Usuario
     let usuario = await User.findOne({ email });
     if (!usuario) {
       usuario = await User.create({
-        nombre: name,
+        nombre: name || "",
         email,
         rol: "empleado",
         sector: "sin asignar",
       });
+      console.log("＋ Usuario creado:", usuario.email);
+    } else {
+      console.log("✓ Usuario existente:", usuario.email, "rol:", usuario.rol);
     }
 
     return res.status(200).json({
@@ -102,9 +124,14 @@ app.post("/auth/google", async (req, res) => {
       sector: usuario.sector,
     });
   } catch (error) {
-    return res
-      .status(401)
-      .json({ message: "Token inválido", error: error.message });
+    console.error(
+      "× Error en /auth/google:",
+      error?.response?.data || error?.message || error
+    );
+    return res.status(401).json({
+      message: "Token inválido",
+      error: error?.response?.data || error?.message || "unknown",
+    });
   }
 });
 

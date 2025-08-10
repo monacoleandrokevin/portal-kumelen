@@ -7,6 +7,7 @@ function Landing() {
     try {
       // guardo el token *por si* quisieras usar APIs de Google desde el front
       localStorage.setItem("google_access_token", accessToken);
+      console.log("access_token length:", (accessToken || "").length);
 
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL}/auth/google`,
