@@ -1,6 +1,6 @@
 /* global bootstrap */
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
 
 const Admin = () => {
@@ -22,16 +22,11 @@ const Admin = () => {
     "San Carlos - Secundario",
   ];
 
-  // Prioriza el ID token de Google (JWT). Si no existe, usa access_token (por si acaso).
-  const token =
-    localStorage.getItem("google_id_token") ||
-    localStorage.getItem("google_access_token") ||
-    localStorage.getItem("google_token"); // fallback por si quedaba viejo
-
-  const getAuthHeaders = () => ({
-    Authorization: `Bearer ${token}`,
-  });
-
+  const token = useMemo(() => localStorage.getItem("google_access_token"), []);
+  const getAuthHeaders = useCallback(
+    () => ({ Authorization: `Bearer ${token}` }),
+    [token]
+  );
   const manejar401 = () => {
     setError(
       "Sesión expirada o inválida. Por favor, iniciá sesión nuevamente."
@@ -43,28 +38,14 @@ const Admin = () => {
   };
 
   const cargarListas = useCallback(() => {
-    // /users
+    const headers = getAuthHeaders();
     axios
-      .get(`${import.meta.env.VITE_API_URL}/users`, {
-        headers: getAuthHeaders(),
-      })
-      .then((res) => setUsuarios(res.data))
-      .catch((err) => {
-        if (err?.response?.status === 401) manejar401();
-        else setMensaje("Error al obtener usuarios.");
-      });
-
-    // /autorizados
+      .get(`${import.meta.env.VITE_API_URL}/users`, { headers })
+      .then((r) => setUsuarios(r.data));
     axios
-      .get(`${import.meta.env.VITE_API_URL}/autorizados`, {
-        headers: getAuthHeaders(),
-      })
-      .then((res) => setAutorizados(res.data))
-      .catch((err) => {
-        if (err?.response?.status === 401) manejar401();
-        else setMensaje("Error al obtener autorizados.");
-      });
-  }, [token]);
+      .get(`${import.meta.env.VITE_API_URL}/autorizados`, { headers })
+      .then((r) => setAutorizados(r.data));
+  }, [getAuthHeaders]);
 
   useEffect(() => {
     if (!token) {
