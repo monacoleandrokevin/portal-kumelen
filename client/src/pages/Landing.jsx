@@ -2,9 +2,11 @@ import "../styles/landing.scss";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function Landing() {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const doLogin = async (accessToken) => {
     try {
@@ -23,15 +25,16 @@ function Landing() {
       localStorage.setItem("usuario_nombre", data.nombre);
       localStorage.setItem("usuario_rol", data.rol);
 
-      // Redirigimos por rol
-      window.location.href = data.rol === "admin" ? "/admin" : "/inicio";
+      // Redirigimos por rol (una sola navegación)
+      navigate(data.rol === "admin" ? "/admin" : "/inicio", { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || "Error al autenticar";
       const det = err.response?.data?.error
         ? `\nDetalle: ${JSON.stringify(err.response.data.error)}`
         : "";
       alert(msg + det);
-      // ante error, limpiamos el access_token local
+
+      // Ante error, limpiamos el access_token local
       localStorage.removeItem("google_access_token");
     } finally {
       setLoading(false);

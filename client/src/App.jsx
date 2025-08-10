@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GuestRoute from "./components/GuestRoute";
+import GuestOnly from "./components/GuestOnly";
 import Landing from "./pages/Landing"; // /login
 import Admin from "./pages/Admin";
 import Inicio from "./pages/Inicio";
@@ -12,6 +13,14 @@ export default function App() {
       <Navbar />
       <Routes>
         {/* Home real (dashboard) */}
+        <Route
+          path="/"
+          element={
+            <GuestOnly>
+              <Landing />
+            </GuestOnly>
+          }
+        />
         <Route
           path="/inicio"
           element={
