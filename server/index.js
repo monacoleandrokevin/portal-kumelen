@@ -39,25 +39,41 @@ app.use(express.json());
 app.use("/users", usersRoutes);
 
 app.post("/auth/google", async (req, res) => {
-  const { token } = req.body;
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    const { token, access_token } = req.body;
+    let email, name;
 
-    const payload = ticket.getPayload();
-    const email = payload.email;
-    const name = payload.name;
+    if (token) {
+      // Flujo anterior: ID token
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      email = payload.email;
+      name = payload.name;
+    } else if (access_token) {
+      // Nuevo: usamos el access_token para leer userinfo desde Google
+      const { data } = await axios.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        { headers: { Authorization: `Bearer ${access_token}` } }
+      );
+      email = data.email;
+      name = data.name || data.given_name || "";
+      if (!email)
+        return res
+          .status(401)
+          .json({ message: "No se pudo obtener el email de Google" });
+    } else {
+      return res.status(400).json({ message: "Falta token de Google" });
+    }
 
-    // Validar dominio permitido
+    // Validación dominio y lista blanca
     if (!email.endsWith(`@${process.env.PERMITIDO_DOMINIO}`)) {
       return res
         .status(403)
         .json({ message: "Acceso denegado. Solo correos institucionales." });
     }
-
-    // Validar que esté en la lista blanca (autorizados)
     const autorizado = await Autorizado.findOne({ email });
     if (!autorizado) {
       return res
@@ -65,9 +81,8 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "Este correo no está habilitado para ingresar." });
     }
 
-    // Buscar o crear el usuario
+    // Buscar / crear usuario
     let usuario = await User.findOne({ email });
-
     if (!usuario) {
       usuario = await User.create({
         nombre: name,
