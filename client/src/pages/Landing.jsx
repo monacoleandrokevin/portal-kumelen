@@ -3,30 +3,33 @@ import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import useAuth from "../hooks/useAuth";
 
 function Landing() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const auth = useAuth();
+
+  // método del AuthContext (renombrado para no chocar con el hook de Google)
+  const { login: authLogin } = useAuth();
 
   const doLogin = async (accessToken) => {
     try {
       setLoading(true);
 
+      // Autenticación contra tu backend (con access_token)
       const { data } = await axios.post(
         `${import.meta.env.VITE_API_URL}/auth/google`,
         { access_token: accessToken }
       );
 
-      // Guardamos todo en el contexto (y en localStorage dentro del contexto)
-      auth.login({
-        access_token: accessToken,
-        nombre: data.nombre,
-        rol: data.rol,
+      // Guardar sesión en el contexto global
+      authLogin({
+        name: data.nombre,
+        role: data.rol,
+        accessToken, // por si luego usás APIs de Google desde el front
       });
 
-      // Redirigir por rol
+      // Redirección por rol
       navigate(data.rol === "admin" ? "/admin" : "/inicio", { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || "Error al autenticar";
@@ -39,12 +42,14 @@ function Landing() {
     }
   };
 
-  const login = useGoogleLogin({
+  // Hook de Google (popup → entrega access_token)
+  const googleLogin = useGoogleLogin({
     onSuccess: (t) => doLogin(t.access_token),
     onError: () => alert("Error en el login"),
     scope: "openid email profile",
     flow: "implicit",
   });
+
   return (
     <main className="landing d-flex min-vh-100">
       <div className="container-fluid">
@@ -66,7 +71,7 @@ function Landing() {
 
               <button
                 className="btn btn-dark w-100 py-2 login-google-btn"
-                onClick={() => login()}
+                onClick={() => googleLogin()}
                 disabled={loading}
               >
                 {loading ? (
