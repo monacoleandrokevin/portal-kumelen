@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
+import { getAuthHeaders } from "../utils/auth";
 
 const Admin = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -40,10 +41,10 @@ const Admin = () => {
   const cargarListas = useCallback(() => {
     const headers = getAuthHeaders();
     axios
-      .get(`${import.meta.env.VITE_API_URL}/users`, { headers })
+      .get(`${import.meta.env.VITE_API_URL}/users`, { getAuthHeaders })
       .then((r) => setUsuarios(r.data));
     axios
-      .get(`${import.meta.env.VITE_API_URL}/autorizados`, { headers })
+      .get(`${import.meta.env.VITE_API_URL}/autorizados`, { getAuthHeaders })
       .then((r) => setAutorizados(r.data));
   }, [getAuthHeaders]);
 

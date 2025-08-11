@@ -13,3 +13,7 @@ export const logout = () => {
   localStorage.removeItem("usuario_rol");
   window.location.href = "/login"; // adonde quieras llevar al cerrar sesión
 };
+export function getAuthHeaders() {
+  const t = localStorage.getItem("google_access_token");
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}

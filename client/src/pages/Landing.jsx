@@ -3,29 +3,30 @@ import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function Landing() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const auth = useAuth();
 
   const doLogin = async (accessToken) => {
     try {
       setLoading(true);
 
-      // Guardamos el token de Google para usarlo después como Bearer
-      localStorage.setItem("google_access_token", accessToken);
-
-      // Autenticamos contra tu backend (acepta access_token)
       const { data } = await axios.post(
         `${import.meta.env.VITE_API_URL}/auth/google`,
         { access_token: accessToken }
       );
 
-      // Persistimos datos útiles
-      localStorage.setItem("usuario_nombre", data.nombre);
-      localStorage.setItem("usuario_rol", data.rol);
+      // Guardamos todo en el contexto (y en localStorage dentro del contexto)
+      auth.login({
+        access_token: accessToken,
+        nombre: data.nombre,
+        rol: data.rol,
+      });
 
-      // Redirigimos por rol (una sola navegación)
+      // Redirigir por rol
       navigate(data.rol === "admin" ? "/admin" : "/inicio", { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || "Error al autenticar";
@@ -33,9 +34,6 @@ function Landing() {
         ? `\nDetalle: ${JSON.stringify(err.response.data.error)}`
         : "";
       alert(msg + det);
-
-      // Ante error, limpiamos el access_token local
-      localStorage.removeItem("google_access_token");
     } finally {
       setLoading(false);
     }
@@ -45,9 +43,8 @@ function Landing() {
     onSuccess: (t) => doLogin(t.access_token),
     onError: () => alert("Error en el login"),
     scope: "openid email profile",
-    flow: "implicit", // popup (entrega access_token)
+    flow: "implicit",
   });
-
   return (
     <main className="landing d-flex min-vh-100">
       <div className="container-fluid">

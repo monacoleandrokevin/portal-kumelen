@@ -1,78 +1,63 @@
-import { Link, useLocation } from "react-router-dom";
-import { isLoggedIn, getUser, logout } from "../utils/auth";
+import { Link, NavLink } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
-  const logged = isLoggedIn();
-  const { rol } = getUser();
-  const { pathname } = useLocation();
+  const { isLogged, nombre, rol, logout } = useAuth();
 
   return (
-    <nav className="navbar navbar-dark bg-dark navbar-expand-md">
+    <nav className="navbar navbar-dark bg-dark navbar-expand-lg">
       <div className="container">
-        <Link className="navbar-brand" to={logged ? "/inicio" : "/login"}>
+        <Link className="navbar-brand" to="/inicio">
           Portal Kumelen
         </Link>
 
-        {logged ? (
-          <>
-            <button
-              className="navbar-toggler"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#nav"
-            >
-              <span className="navbar-toggler-icon"></span>
-            </button>
+        <button
+          className="navbar-toggler"
+          data-bs-toggle="collapse"
+          data-bs-target="#nav"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
 
-            <div className="collapse navbar-collapse" id="nav">
-              <ul className="navbar-nav me-auto">
+        <div id="nav" className="collapse navbar-collapse">
+          <ul className="navbar-nav me-auto">
+            {isLogged && (
+              <>
                 <li className="nav-item">
-                  <Link
-                    className={`nav-link ${
-                      pathname === "/inicio" ? "active" : ""
-                    }`}
-                    to="/inicio"
-                  >
+                  <NavLink className="nav-link" to="/inicio">
                     Inicio
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${
-                      pathname === "/reservas" ? "active" : ""
-                    }`}
-                    to="/reservas"
-                  >
-                    Reservas
-                  </Link>
+                  </NavLink>
                 </li>
                 {rol === "admin" && (
                   <li className="nav-item">
-                    <Link
-                      className={`nav-link ${
-                        pathname === "/admin" ? "active" : ""
-                      }`}
-                      to="/admin"
-                    >
+                    <NavLink className="nav-link" to="/admin">
                       Admin
-                    </Link>
+                    </NavLink>
                   </li>
                 )}
-              </ul>
+              </>
+            )}
+          </ul>
 
-              <button className="btn btn-outline-light btn-sm" onClick={logout}>
-                Cerrar sesión
-              </button>
-            </div>
-          </>
-        ) : (
-          // Sin sesión: navbar minimal (solo marca). Si querés un botón:
-          <div className="d-none d-md-block">
-            <Link to="/login" className="btn btn-outline-light btn-sm">
-              Acceder
-            </Link>
+          <div className="d-flex align-items-center gap-3">
+            {isLogged ? (
+              <>
+                <span className="text-light small">{nombre}</span>
+                <button
+                  className="btn btn-outline-light btn-sm"
+                  onClick={logout}
+                >
+                  Salir
+                </button>
+              </>
+            ) : (
+              // si NO hay sesión, solo mostramos el acceso al login
+              <NavLink className="btn btn-primary btn-sm" to="/">
+                Acceder
+              </NavLink>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </nav>
   );
