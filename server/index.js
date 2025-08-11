@@ -12,8 +12,6 @@ dotenv.config();
 
 import mongoose from "mongoose";
 
-console.log("URI leída desde .env:", process.env.MONGO_URI);
-
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -22,13 +20,12 @@ mongoose
   .then(() => console.log("✅ Conectado a MongoDB Atlas"))
   .catch((err) => console.error("❌ Error al conectar MongoDB:", err));
 
-dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(
   cors({
-    origin: ["https://portal-kumelen.vercel.app"],
+    origin: [process.env.FRONTEND_URL, "http://localhost:5173"].filter(Boolean),
     credentials: true,
   })
 );
@@ -133,15 +130,6 @@ app.post("/auth/google", async (req, res) => {
       message: "Token inválido",
       error: error?.response?.data || error?.message || "unknown",
     });
-  }
-});
-
-app.get("/users", checkAdmin, async (req, res) => {
-  try {
-    const usuarios = await User.find({}, "-__v -createdAt -updatedAt");
-    res.json(usuarios);
-  } catch (err) {
-    res.status(500).json({ message: "Error al obtener usuarios" });
   }
 });
 

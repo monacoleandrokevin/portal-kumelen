@@ -11,7 +11,7 @@ export const logout = () => {
   localStorage.removeItem("google_token");
   localStorage.removeItem("usuario_nombre");
   localStorage.removeItem("usuario_rol");
-  window.location.href = "/login"; // adonde quieras llevar al cerrar sesión
+  window.location.href = "/";
 };
 export function getAuthHeaders() {
   const t = localStorage.getItem("google_access_token");
