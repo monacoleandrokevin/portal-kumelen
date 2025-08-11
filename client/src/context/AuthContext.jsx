@@ -1,49 +1,37 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AuthContext } from "./auth-context";
 
-const AuthContext = createContext(null);
+export default function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
 
-export function AuthProvider({ children }) {
-  const [token, setToken] = useState(null);
-  const [nombre, setNombre] = useState(null);
-  const [rol, setRol] = useState(null);
-
-  // Cargar desde localStorage al iniciar
   useEffect(() => {
-    const t = localStorage.getItem("google_access_token");
-    const n = localStorage.getItem("usuario_nombre");
-    const r = localStorage.getItem("usuario_rol");
-    if (t) setToken(t);
-    if (n) setNombre(n);
-    if (r) setRol(r);
+    const at = localStorage.getItem("google_access_token");
+    const role = localStorage.getItem("usuario_rol");
+    const name = localStorage.getItem("usuario_nombre");
+    if (at && role) setUser({ name: name || "", role });
   }, []);
 
-  // API pública del contexto
-  const login = ({ access_token, nombre, rol }) => {
-    localStorage.setItem("google_access_token", access_token);
-    localStorage.setItem("usuario_nombre", nombre);
-    localStorage.setItem("usuario_rol", rol);
-    setToken(access_token);
-    setNombre(nombre);
-    setRol(rol);
-  };
-
-  const logout = () => {
-    localStorage.removeItem("google_access_token");
-    localStorage.removeItem("usuario_nombre");
-    localStorage.removeItem("usuario_rol");
-    setToken(null);
-    setNombre(null);
-    setRol(null);
-  };
-
   const value = useMemo(
-    () => ({ token, nombre, rol, isLogged: !!token, login, logout }),
-    [token, nombre, rol]
+    () => ({
+      isLogged: !!user,
+      role: user?.role ?? null,
+      name: user?.name ?? null,
+      login: ({ name, role, accessToken }) => {
+        if (accessToken)
+          localStorage.setItem("google_access_token", accessToken);
+        if (name) localStorage.setItem("usuario_nombre", name);
+        if (role) localStorage.setItem("usuario_rol", role);
+        setUser({ name: name || "", role: role || "empleado" });
+      },
+      logout: () => {
+        localStorage.removeItem("google_access_token");
+        localStorage.removeItem("usuario_nombre");
+        localStorage.removeItem("usuario_rol");
+        setUser(null);
+      },
+    }),
+    [user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

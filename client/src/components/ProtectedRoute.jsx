@@ -1,12 +1,14 @@
-// src/components/ProtectedRoute.jsx
 import { Navigate } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
 
-export default function ProtectedRoute({ children, role }) {
-  const token = localStorage.getItem("google_access_token");
-  if (!token) return <Navigate to="/" replace />;
+export default function ProtectedRoute({ children, requiredRole }) {
+  const { isLogged, role } = useAuth();
 
-  const userRole = localStorage.getItem("usuario_rol");
-  if (role && role !== userRole) return <Navigate to="/inicio" replace />;
+  if (!isLogged) return <Navigate to="/" replace />;
+
+  if (requiredRole && role !== requiredRole) {
+    return <Navigate to="/inicio" replace />;
+  }
 
   return children;
 }
