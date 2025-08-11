@@ -2,7 +2,7 @@ import { Link, NavLink } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 
 export default function Navbar() {
-  const { isLogged, nombre, rol, logout } = useAuth();
+  const { isLogged, name, role, logout } = useAuth();
 
   return (
     <nav className="navbar navbar-dark bg-dark navbar-expand-lg">
@@ -28,7 +28,7 @@ export default function Navbar() {
                     Inicio
                   </NavLink>
                 </li>
-                {rol === "admin" && (
+                {role === "admin" && (
                   <li className="nav-item">
                     <NavLink className="nav-link" to="/admin">
                       Admin
@@ -42,7 +42,7 @@ export default function Navbar() {
           <div className="d-flex align-items-center gap-3">
             {isLogged ? (
               <>
-                <span className="text-light small">{nombre}</span>
+                <span className="text-light small">{name}</span>
                 <button
                   className="btn btn-outline-light btn-sm"
                   onClick={logout}

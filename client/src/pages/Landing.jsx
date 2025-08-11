@@ -26,7 +26,7 @@ function Landing() {
       clearTimeout(t);
 
       authLogin({ name: data.nombre, role: data.rol, accessToken });
-      navigate(data.rol === "admin" ? "/admin" : "/inicio", { replace: true });
+      navigate("/inicio", { replace: true });
     } catch (err) {
       const isAbort =
         err.name === "CanceledError" || err.code === "ECONNABORTED";
