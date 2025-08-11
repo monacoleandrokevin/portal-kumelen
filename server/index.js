@@ -31,18 +31,16 @@ const allowedOrigins = [
 
 const corsConfig = {
   origin: (origin, cb) => {
-    // permitir llamadas de herramientas (no envían Origin) y orígenes permitidos
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error("Not allowed by CORS"));
+    cb(new Error("Not allowed by CORS"));
   },
   methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true, // no es necesario si no usás cookies, pero no molesta
+  credentials: true,
 };
 
 app.use(cors(corsConfig));
-// MUY IMPORTANTE: responder preflights
-app.options("*", cors(corsConfig));
+app.options("*", cors(corsConfig)); // <- responde preflights siempre
 app.use(express.json());
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -239,5 +237,7 @@ app.get("/autorizados", checkAdmin, async (req, res) => {
     res.status(500).json({ message: "Error al obtener autorizados" });
   }
 });
+
+app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
 
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));

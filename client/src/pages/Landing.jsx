@@ -15,23 +15,25 @@ function Landing() {
   const doLogin = async (accessToken) => {
     try {
       setLoading(true);
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 15000); // 15s
 
-      // Autenticación contra tu backend (con access_token)
       const { data } = await axios.post(
         `${import.meta.env.VITE_API_URL}/auth/google`,
-        { access_token: accessToken }
+        { access_token: accessToken },
+        { signal: controller.signal, timeout: 15000 } // timeout para axios
       );
+      clearTimeout(t);
 
-      // Guardar sesión en el contexto global
-      authLogin({
-        name: data.nombre,
-        role: data.rol,
-        accessToken, // por si luego usás APIs de Google desde el front
-      });
-
-      // Redirección por rol
+      authLogin({ name: data.nombre, role: data.rol, accessToken });
       navigate(data.rol === "admin" ? "/admin" : "/inicio", { replace: true });
     } catch (err) {
+      const isAbort =
+        err.name === "CanceledError" || err.code === "ECONNABORTED";
+      if (isAbort) {
+        alert("El servidor está iniciando… Reintentá en unos segundos.");
+        return;
+      }
       const msg = err.response?.data?.message || "Error al autenticar";
       const det = err.response?.data?.error
         ? `\nDetalle: ${JSON.stringify(err.response.data.error)}`
