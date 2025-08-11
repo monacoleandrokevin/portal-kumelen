@@ -1,18 +1,18 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+// src/App.jsx
+import { Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import ProtectedRoute from "./components/ProtectedRoute";
-import GuestRoute from "./components/GuestRoute";
-import GuestOnly from "./components/GuestOnly";
-import Landing from "./pages/Landing"; // /login
-import Admin from "./pages/Admin";
+import Landing from "./pages/Landing";
 import Inicio from "./pages/Inicio";
+import Admin from "./pages/Admin";
+import ProtectedRoute from "./components/ProtectedRoute";
+import GuestOnly from "./components/GuestOnly";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <>
       <Navbar />
       <Routes>
-        {/* Home real (dashboard) */}
+        {/* Solo para NO logueados */}
         <Route
           path="/"
           element={
@@ -21,6 +21,7 @@ export default function App() {
             </GuestOnly>
           }
         />
+        {/* Rutas protegidas */}
         <Route
           path="/inicio"
           element={
@@ -29,32 +30,17 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Admin */}
         <Route
           path="/admin"
           element={
-            <ProtectedRoute requireAdmin>
+            <ProtectedRoute requiredRole="admin">
               <Admin />
             </ProtectedRoute>
           }
         />
-
-        {/* Login solo para invitados */}
-        <Route
-          path="/login"
-          element={
-            <GuestRoute>
-              <Landing />
-            </GuestRoute>
-          }
-        />
-
-        {/* Redirección raíz */}
-        <Route path="/" element={<Navigate to="/inicio" replace />} />
-
-        {/* TODO: agregar /reservas, /mi-perfil, etc. */}
+        {/* 404 -> redirigir */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </BrowserRouter>
+    </>
   );
 }
