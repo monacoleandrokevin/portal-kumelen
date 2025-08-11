@@ -1,8 +1,13 @@
 /* global bootstrap */
+import { useEffect, useState, useCallback } from "react";
+import api from "../lib/api";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
-import axios from "axios";
-import { getAuthHeaders } from "../utils/auth";
+const nivelesDisponibles = ["Maternal", "Inicial", "Primario", "Secundario"];
+const edificiosDisponibles = [
+  "Parque de la Biodiversidad",
+  "San Carlos - Inicial / Primario",
+  "San Carlos - Secundario",
+];
 
 const Admin = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -10,137 +15,93 @@ const Admin = () => {
   const [nuevoEmail, setNuevoEmail] = useState("");
   const [error, setError] = useState(null);
   const [mensaje, setMensaje] = useState(null);
+
   const [usuarioActivo, setUsuarioActivo] = useState(null);
   const [vinculosTemp, setVinculosTemp] = useState([]);
   const [nuevoEdificio, setNuevoEdificio] = useState("");
   const [nuevoNivel, setNuevoNivel] = useState([]);
   const [nuevoRol, setNuevoRol] = useState("");
 
-  const nivelesDisponibles = ["Maternal", "Inicial", "Primario", "Secundario"];
-  const edificiosDisponibles = [
-    "Parque de la Biodiversidad",
-    "San Carlos - Inicial / Primario",
-    "San Carlos - Secundario",
-  ];
-
-  const token = useMemo(() => localStorage.getItem("google_access_token"), []);
-  const getAuthHeaders = useCallback(
-    () => ({ Authorization: `Bearer ${token}` }),
-    [token]
-  );
-  const manejar401 = () => {
-    setError(
-      "Sesión expirada o inválida. Por favor, iniciá sesión nuevamente."
-    );
-    // opcional: limpiar tokens
-    // localStorage.removeItem("google_id_token");
-    // localStorage.removeItem("google_access_token");
-    setTimeout(() => (window.location.href = "/"), 1200);
-  };
-
-  const cargarListas = useCallback(() => {
-    const headers = getAuthHeaders();
-    axios
-      .get(`${import.meta.env.VITE_API_URL}/users`, { getAuthHeaders })
-      .then((r) => setUsuarios(r.data));
-    axios
-      .get(`${import.meta.env.VITE_API_URL}/autorizados`, { getAuthHeaders })
-      .then((r) => setAutorizados(r.data));
-  }, [getAuthHeaders]);
+  const cargarListas = useCallback(async () => {
+    try {
+      const [u, a] = await Promise.all([
+        api.get("/users"),
+        api.get("/autorizados"),
+      ]);
+      setUsuarios(u.data);
+      setAutorizados(a.data);
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        setError("Sesión expirada o inválida. Volvé a iniciar sesión.");
+      } else {
+        setError("Error al cargar datos.");
+      }
+    }
+  }, []);
 
   useEffect(() => {
+    const token = localStorage.getItem("google_access_token");
     if (!token) {
-      setError("No hay token. Iniciá sesión.");
+      setError("No hay sesión. Iniciá sesión.");
       return;
     }
     cargarListas();
-  }, [token, cargarListas]);
-
-  const eliminarAutorizado = (id) => {
-    axios
-      .delete(`${import.meta.env.VITE_API_URL}/autorizados/${id}`, {
-        headers: getAuthHeaders(),
-      })
-      .then(() => {
-        setMensaje("Correo eliminado.");
-        cargarListas();
-      })
-      .catch((err) => {
-        if (err?.response?.status === 401) manejar401();
-        else setMensaje("Error al eliminar correo.");
-      });
-  };
-
-  const cambiarRol = (id, rolActual) => {
-    const nuevoRol = rolActual === "admin" ? "empleado" : "admin";
-
-    axios
-      .patch(
-        `${import.meta.env.VITE_API_URL}/users/${id}/rol`,
-        { nuevoRol },
-        { headers: getAuthHeaders() }
-      )
-      .then(() => {
-        setMensaje(`Rol cambiado a ${nuevoRol}.`);
-        cargarListas();
-      })
-      .catch((err) => {
-        if (err?.response?.status === 401) manejar401();
-        else setMensaje("Error al cambiar rol.");
-      });
-  };
-
-  const agregarAutorizado = (e) => {
-    e.preventDefault();
-    setMensaje(null);
-
-    axios
-      .post(
-        `${import.meta.env.VITE_API_URL}/autorizados`,
-        { email: nuevoEmail },
-        { headers: getAuthHeaders() }
-      )
-      .then(() => {
-        setMensaje("Correo autorizado correctamente.");
-        setNuevoEmail("");
-        cargarListas();
-      })
-      .catch((err) => {
-        if (err?.response?.status === 401) manejar401();
-        else
-          setMensaje(
-            err.response?.data?.message || "Error al autorizar correo"
-          );
-      });
-  };
+  }, [cargarListas]);
 
   const abrirModal = (user) => {
     setUsuarioActivo(user);
-    setVinculosTemp([...user.vinculos]);
+    setVinculosTemp(Array.isArray(user.vinculos) ? [...user.vinculos] : []);
     const modal = new bootstrap.Modal(document.getElementById("modalVinculos"));
     modal.show();
   };
 
-  const guardarVinculos = () => {
-    if (!usuarioActivo) return;
+  const eliminarAutorizado = async (id) => {
+    try {
+      await api.delete(`/autorizados/${id}`);
+      setMensaje("Correo eliminado.");
+      cargarListas();
+    } catch {
+      setMensaje("Error al eliminar correo.");
+    }
+  };
 
-    axios
-      .patch(
-        `${import.meta.env.VITE_API_URL}/users/${usuarioActivo._id}/vinculos`,
-        { nuevosVinculos: vinculosTemp }, // <- lo que espera el backend
-        { headers: getAuthHeaders() }
-      )
-      .then(() => {
-        setMensaje("Vínculos actualizados correctamente.");
-        cargarListas();
-        const modalEl = document.getElementById("modalVinculos");
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        modal.hide();
-      })
-      .catch((err) => {
-        if (err?.response?.status === 401) manejar401();
-        else setMensaje("Error al guardar los vínculos.");
+  const cambiarRol = async (id, rolActual) => {
+    try {
+      const nuevoRol = rolActual === "admin" ? "empleado" : "admin";
+      await api.patch(`/users/${id}/rol`, { nuevoRol });
+      setMensaje(`Rol cambiado a ${nuevoRol}.`);
+      cargarListas();
+    } catch {
+      setMensaje("Error al cambiar rol.");
+    }
+  };
+
+  const agregarAutorizado = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post("/autorizados", { email: nuevoEmail });
+      setMensaje("Correo autorizado correctamente.");
+      setNuevoEmail("");
+      cargarListas();
+    } catch (err) {
+      setMensaje(err.response?.data?.message || "Error al autorizar correo");
+    }
+  };
+
+  const guardarVinculos = async () => {
+    if (!usuarioActivo) return;
+    try {
+      await api.patch(`/users/${usuarioActivo._id}/vinculos`, {
+        vinculos: vinculosTemp,
       });
+      setMensaje("Vínculos actualizados correctamente.");
+      cargarListas();
+      const modalEl = document.getElementById("modalVinculos");
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide();
+    } catch {
+      setMensaje("Error al guardar los vínculos.");
+    }
   };
 
   if (error)
