@@ -23,13 +23,26 @@ mongoose
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(
-  cors({
-    origin: [process.env.FRONTEND_URL, "http://localhost:5173"].filter(Boolean),
-    credentials: true,
-  })
-);
+const allowedOrigins = [
+  process.env.FRONTEND_URL, // ej: https://portal-kumelen.vercel.app
+  "https://portal-kumelen.vercel.app",
+  "http://localhost:5173",
+].filter(Boolean);
 
+const corsConfig = {
+  origin: (origin, cb) => {
+    // permitir llamadas de herramientas (no envían Origin) y orígenes permitidos
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true, // no es necesario si no usás cookies, pero no molesta
+};
+
+app.use(cors(corsConfig));
+// MUY IMPORTANTE: responder preflights
+app.options("*", cors(corsConfig));
 app.use(express.json());
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
