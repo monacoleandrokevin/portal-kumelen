@@ -1,18 +1,28 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import App from "./App.jsx";
-import AuthProvider from "./context/AuthProvider.jsx";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import AuthProvider from "./context/AuthProvider";
+import App from "./App";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./index.css";
 
+const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+if (!clientId) {
+  // opcional: ayuda a detectar si te olvidaste la env var
+  console.warn("⚠️ VITE_GOOGLE_CLIENT_ID no está definido");
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <AuthProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </AuthProvider>
+    <GoogleOAuthProvider clientId={clientId}>
+      <AuthProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </AuthProvider>
+    </GoogleOAuthProvider>
   </React.StrictMode>
 );
