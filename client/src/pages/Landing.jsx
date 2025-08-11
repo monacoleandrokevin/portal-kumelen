@@ -96,6 +96,11 @@ function Landing() {
               role="img"
               aria-label="Imagen institucional"
             />
+            <img
+              src="https://res.cloudinary.com/dzxsbydje/image/upload/v1754953896/portada_fruaiv.png"
+              alt="Imagen Portada"
+              className="img-fluid"
+            />
           </div>
         </div>
       </div>
