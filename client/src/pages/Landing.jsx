@@ -58,7 +58,7 @@ function Landing() {
         <div className="row g-0 min-vh-100">
           {/* Columna Login */}
           <div className="col-12 col-md-6 d-flex align-items-center justify-content-center p-4 p-md-5">
-            <div className="login-card w-100" style={{ maxWidth: 420 }}>
+            <div className="login-card w-100">
               <div className="brand mb-4 text-center">
                 <div className="logo-circle">
                   <img
