@@ -143,8 +143,8 @@ $fondo-oscuro: #0f1113;
 }
 
 .logo-circle {
-  width: 116px; /* tamaño más grande */
-  height: 116px;
+  width: 126px; /* tamaño más grande */
+  height: 126px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -155,6 +155,6 @@ $fondo-oscuro: #0f1113;
 }
 
 .logo-circle img {
-  width: 78%; /* agranda un poco dentro */
+  width: 85%; /* agranda un poco dentro */
   height: auto;
 }
