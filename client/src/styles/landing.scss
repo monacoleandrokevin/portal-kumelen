@@ -152,9 +152,10 @@ $fondo-oscuro: #0f1113;
   background-color: #fff !important; /* forzamos blanco puro */
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   overflow: hidden;
+  padding: 10px;
 }
 
 .logo-circle img {
-  width: 85%; /* agranda un poco dentro */
+  width: 100%;
   height: auto;
 }
