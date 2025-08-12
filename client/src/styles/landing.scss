@@ -62,36 +62,34 @@ $fondo-oscuro: #0f1113;
   }
 }
 
-/* Botón Google */
-.login-google-btn {
-  /* estética */
-  background: rgba(0, 0, 0, 0.75);
-  border: 1.5px solid #fff;
-  color: #fff; /* texto siempre blanco */
+/* Botón Google: borde blanco, texto blanco, único efecto = scale */
+.landing .login-card .btn.login-google-btn {
+  /* forzamos variables BS para que no te las pise */
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+
+  --bs-btn-bg: rgba(0, 0, 0, 0.75);
+  --bs-btn-hover-bg: rgba(0, 0, 0, 0.75);
+  --bs-btn-active-bg: rgba(0, 0, 0, 0.75);
+
+  --bs-btn-border-color: #fff;
+  --bs-btn-hover-border-color: #fff;
+  --bs-btn-active-border-color: #fff;
+
   border-radius: 12px;
   font-weight: 600;
 
-  /* interacción */
+  /* animación de agrandar */
   transition: transform 0.12s ease;
-  transform: translateZ(0); /* suaviza en algunos navegadores */
-  cursor: pointer;
+  transform: translateZ(0);
+}
 
-  /* estados */
-  &:hover {
-    transform: scale(1.03); /* “agrandado” */
-    color: #fff; /* por si Bootstrap intenta pisar */
-  }
-  &:active {
-    transform: scale(0.99);
-  }
-  &:disabled {
-    opacity: 0.8;
-    cursor: not-allowed;
-  }
-  &:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: 2px;
-  }
+.landing .login-card .btn.login-google-btn:hover {
+  transform: scale(1.03);
+}
+.landing .login-card .btn.login-google-btn:active {
+  transform: scale(0.99);
 }
 
 /* Columna derecha decorativa (sin imagen) */
