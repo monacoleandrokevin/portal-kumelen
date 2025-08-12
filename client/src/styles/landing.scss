@@ -64,20 +64,33 @@ $fondo-oscuro: #0f1113;
 
 /* Botón Google */
 .login-google-btn {
-  border-radius: 12px; /* más consistente con la card */
-  background: rgba(0, 0, 0, 0.75); /* igual que la card */
-  border: 1px solid #fff;
-  color: #fff;
-  transition: transform 0.08s ease, filter 0.12s ease, background 0.12s ease;
+  /* estética */
+  background: rgba(0, 0, 0, 0.75);
+  border: 1.5px solid #fff;
+  color: #fff; /* texto siempre blanco */
+  border-radius: 12px;
+  font-weight: 600;
 
+  /* interacción */
+  transition: transform 0.12s ease;
+  transform: translateZ(0); /* suaviza en algunos navegadores */
+  cursor: pointer;
+
+  /* estados */
   &:hover {
-    filter: brightness(1.08);
+    transform: scale(1.03); /* “agrandado” */
+    color: #fff; /* por si Bootstrap intenta pisar */
   }
   &:active {
-    transform: scale(0.98);
+    transform: scale(0.99);
   }
   &:disabled {
     opacity: 0.8;
+    cursor: not-allowed;
+  }
+  &:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
   }
 }
 
