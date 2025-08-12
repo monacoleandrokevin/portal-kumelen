@@ -158,3 +158,22 @@ $fondo-oscuro: #0f1113;
   width: 100%;
   height: auto;
 }
+
+/* Tamaño controlado del logo SOLO dentro del círculo */
+.landing .login-card .brand .logo-circle {
+  width: 120px; /* o 116px si preferís */
+  height: 120px;
+  padding: 10px; /* aire interno; el logo crece con el círculo */
+  background-color: #fff !important;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.landing .login-card .brand .logo-circle img {
+  display: block;
+  width: 100% !important; /* llena el contenedor respetando el padding */
+  height: 100% !important; /* asegura que ocupe el alto del círculo */
+  object-fit: contain; /* que no se deforme */
+}
