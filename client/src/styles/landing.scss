@@ -142,20 +142,19 @@ $fondo-oscuro: #0f1113;
   }
 }
 
-/* Marco redondo para el logo */
 .logo-circle {
-  width: 116px; /* antes podría ser 84px */
+  width: 116px; /* tamaño más grande */
   height: 116px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   margin: 0 auto;
-  background: #fff; /* fondo suave */
+  background-color: #fff !important; /* forzamos blanco puro */
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   overflow: hidden;
 }
 
 .logo-circle img {
-  width: 78%; /* agranda el logo dentro del círculo */
+  width: 78%; /* agranda un poco dentro */
   height: auto;
 }
