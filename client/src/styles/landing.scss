@@ -62,40 +62,29 @@ $fondo-oscuro: #0f1113;
   }
 }
 
-/* Botón Google: borde blanco, texto blanco, único efecto = scale */
+/* Botón Google*/
 .landing .login-card .btn.login-google-btn {
-  --bs-btn-bg: rgba(0, 0, 0, 0.75);
-  --bs-btn-hover-bg: rgba(0, 0, 0, 0.75);
-  --bs-btn-active-bg: rgba(0, 0, 0, 0.75);
-
-  --bs-btn-border-color: #fff;
-  --bs-btn-hover-border-color: #fff;
-  --bs-btn-active-border-color: #fff;
-
-  --bs-btn-color: #fff;
-  --bs-btn-hover-color: #fff;
-  --bs-btn-active-color: #fff;
-
+  background-color: rgba(0, 0, 0, 0.75) !important; /* fuerza translúcido */
+  border: 1.5px solid #fff !important; /* borde blanco */
+  color: #fff !important; /* texto blanco */
   border-radius: 12px;
   font-weight: 600;
-  padding: 0.6rem 1rem;
-
   transition: transform 0.12s ease;
-}
 
-.landing .login-card .btn.login-google-btn:hover {
-  transform: scale(1.03);
-}
+  &:hover {
+    transform: scale(1.03);
+    background-color: rgba(0, 0, 0, 0.75) !important; /* sin cambio en hover */
+    color: #fff !important;
+  }
 
-.landing .login-card .btn.login-google-btn:active {
-  transform: scale(0.99);
-}
+  &:active {
+    transform: scale(0.99);
+  }
 
-/* Asegura que ícono y texto hereden color blanco */
-.landing .login-card .btn.login-google-btn span,
-.landing .login-card .btn.login-google-btn svg {
-  color: #fff !important;
-  fill: #fff !important;
+  &:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+  }
 }
 
 /* Columna derecha decorativa (sin imagen) */
