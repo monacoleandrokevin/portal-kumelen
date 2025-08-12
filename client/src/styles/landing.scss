@@ -66,7 +66,7 @@ $fondo-oscuro: #0f1113;
 .login-google-btn {
   border-radius: 12px; /* más consistente con la card */
   background: rgba(0, 0, 0, 0.75); /* igual que la card */
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #fff;
   color: #fff;
   transition: transform 0.08s ease, filter 0.12s ease, background 0.12s ease;
 
