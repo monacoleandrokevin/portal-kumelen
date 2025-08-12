@@ -1,31 +1,31 @@
 /* Paleta inspirada en el logo */
-$verde: #058a59;
-$marron: #6a3c10;
-$naranja: #f28b00;
-$fondo: #0f1113; // por si necesitás usarlo en otras vistas
+$verde-escuela: #058a59; // verde institucional
+$amarillo-suave: #ffd85a; // amarillo más suave, menos saturado
+$naranja-escuela: #f2b03d; // intermedio para transición
+$fondo-oscuro: #0f1113;
 
 /* ——— PORTADA ——— */
 .landing {
   min-height: 100dvh;
   color: #fff;
 
-  /* Fondo: gradiente sin imágenes + leves “luces” radiales */
+  /* Fondo con gradiente más suave */
   background: radial-gradient(
       1200px 800px at 0% 100%,
-      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.05),
       transparent 60%
     ),
     radial-gradient(
       900px 700px at 100% 0%,
-      rgba(0, 0, 0, 0.06),
+      rgba(0, 0, 0, 0.05),
       transparent 55%
     ),
     linear-gradient(
       110deg,
-      $verde 0%,
-      lighten($verde, 10%) 28%,
-      #ffd34e 72%,
-      $naranja 100%
+      $verde-escuela 0%,
+      lighten($verde-escuela, 8%) 30%,
+      $amarillo-suave 68%,
+      $naranja-escuela 100%
     );
   background-size: 100% 100%;
   animation: landingGradientFloat 14s ease-in-out infinite alternate;
@@ -40,13 +40,13 @@ $fondo: #0f1113; // por si necesitás usarlo en otras vistas
   }
 }
 
-/* Columna izquierda (login) */
+/* Columna izquierda (login) con fondo negro translúcido */
 .landing .login-card {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.75); /* negro translúcido */
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 28px;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(4px);
 
   .brand img {
     height: 64px;
@@ -59,15 +59,6 @@ $fondo: #0f1113; // por si necesitás usarlo en otras vistas
     font-weight: 700;
     letter-spacing: 0.2px;
     margin: 0;
-  }
-
-  /* por si en otro lugar usás .btn-primary aquí */
-  .btn-primary {
-    background: $verde;
-    border-color: $verde;
-    &:hover {
-      filter: brightness(1.05);
-    }
   }
 }
 
@@ -85,26 +76,24 @@ $fondo: #0f1113; // por si necesitás usarlo en otras vistas
   }
 }
 
-/* Columna derecha decorativa: sin imagen */
+/* Columna derecha decorativa (sin imagen) */
 .landing .landing-image {
   position: relative;
   height: 100%;
   width: 100%;
-  /* sin background-image */
 }
 .landing .landing-image::after {
   content: "";
   position: absolute;
   inset: 0;
-  /* brillo/vignette suave para dar profundidad en desktop */
   background: radial-gradient(
       600px 420px at 80% 50%,
-      rgba(255, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.15),
       transparent 60%
     ),
     radial-gradient(
       700px 380px at 95% 70%,
-      rgba(0, 0, 0, 0.08),
+      rgba(0, 0, 0, 0.06),
       transparent 65%
     );
   pointer-events: none;
