@@ -63,28 +63,46 @@ $fondo-oscuro: #0f1113;
 }
 
 /* Botón Google*/
-.landing .login-card .btn.login-google-btn {
-  background-color: rgba(0, 0, 0, 0.75) !important; /* fuerza translúcido */
+/* Botón de login: borde blanco, texto blanco, fondo TRANSPARENTE, efecto scale */
+.login-google-btn {
+  /* neutralizar estilos del navegador/Bootstrap */
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent !important; /* <- transparente real */
   border: 1.5px solid #fff !important; /* borde blanco */
   color: #fff !important; /* texto blanco */
   border-radius: 12px;
   font-weight: 600;
+  padding: 0.6rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+
+  /* interacción */
   transition: transform 0.12s ease;
+}
+.login-google-btn:hover {
+  transform: scale(1.03);
+}
+.login-google-btn:active {
+  transform: scale(0.99);
+}
+.login-google-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+.login-google-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
 
-  &:hover {
-    transform: scale(1.03);
-    background-color: rgba(0, 0, 0, 0.75) !important; /* sin cambio en hover */
-    color: #fff !important;
-  }
-
-  &:active {
-    transform: scale(0.99);
-  }
-
-  &:disabled {
-    opacity: 0.8;
-    cursor: not-allowed;
-  }
+/* por si adentro hay spans/svgs con backgrounds heredados por Bootstrap */
+.login-google-btn * {
+  color: inherit !important;
+  fill: currentColor !important;
+  background: transparent !important;
 }
 
 /* Columna derecha decorativa (sin imagen) */
