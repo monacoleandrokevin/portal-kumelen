@@ -1,5 +1,5 @@
 // src/App.jsx
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Landing from "./pages/Landing";
 import Inicio from "./pages/Inicio";
@@ -8,9 +8,11 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import GuestOnly from "./components/GuestOnly";
 
 export default function App() {
+  const { pathname } = useLocation();
+  const showNav = pathname !== "/"; // sin nav en landing
   return (
     <>
-      <Navbar />
+      {showNav && <Navbar />}
       <Routes>
         {/* Solo para NO logueados */}
         <Route

@@ -64,15 +64,20 @@ $fondo-oscuro: #0f1113;
 
 /* Botón Google */
 .login-google-btn {
-  border-radius: 999px;
-  background: #222;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  transition: transform 0.08s ease, filter 0.12s ease;
+  border-radius: 12px; /* más consistente con la card */
+  background: rgba(0, 0, 0, 0.75); /* igual que la card */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transition: transform 0.08s ease, filter 0.12s ease, background 0.12s ease;
+
   &:hover {
-    filter: brightness(1.1);
+    filter: brightness(1.08);
   }
   &:active {
     transform: scale(0.98);
+  }
+  &:disabled {
+    opacity: 0.8;
   }
 }
 
@@ -111,4 +116,22 @@ $fondo-oscuro: #0f1113;
   .landing {
     animation: none;
   }
+}
+
+/* Marco redondo para el logo */
+.logo-circle {
+  width: 96px; /* antes podría ser 84px */
+  height: 96px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.1); /* fondo suave */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.logo-circle img {
+  width: 78%; /* agranda el logo dentro del círculo */
+  height: auto;
 }
