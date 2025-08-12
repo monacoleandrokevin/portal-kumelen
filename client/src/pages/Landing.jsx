@@ -72,7 +72,7 @@ function Landing() {
               </div>
 
               <button
-                className="btn btn-dark w-100 py-2 login-google-btn"
+                className="btn w-100 py-2 login-google-btn"
                 onClick={() => googleLogin()}
                 disabled={loading}
               >
