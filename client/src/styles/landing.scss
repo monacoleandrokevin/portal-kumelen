@@ -144,13 +144,13 @@ $fondo-oscuro: #0f1113;
 
 /* Marco redondo para el logo */
 .logo-circle {
-  width: 96px; /* antes podría ser 84px */
-  height: 96px;
+  width: 116px; /* antes podría ser 84px */
+  height: 116px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   margin: 0 auto;
-  background: rgba(255, 255, 255, 0.1); /* fondo suave */
+  background: #fff; /* fondo suave */
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   overflow: hidden;
 }
