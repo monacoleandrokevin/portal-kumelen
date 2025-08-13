@@ -153,3 +153,13 @@ $naranja-escuela: #f2b03d; // intermedio para transición
     animation: none;
   }
 }
+
+.landing .login-card {
+  text-align: center; /* centra el contenido de texto e inline-block */
+}
+
+.landing .login-card .brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* centra horizontalmente */
+}
