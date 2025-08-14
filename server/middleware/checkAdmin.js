@@ -1,8 +1,6 @@
-import { OAuth2Client } from "google-auth-library";
-import axios from "axios";
+// server/middleware/checkAdmin.js
+import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const log = (...args) => {
   if (process.env.NODE_ENV !== "production")
@@ -11,70 +9,61 @@ const log = (...args) => {
 
 export const checkAdmin = async (req, res, next) => {
   try {
-    const bearer = req.headers.authorization || "";
-    const token = bearer.startsWith("Bearer ") ? bearer.split(" ")[1] : null;
-
-    if (!token) {
+    // 1) Tomar y validar Bearer
+    const auth = req.headers.authorization || "";
+    const [scheme, token] = auth.split(" ");
+    if (scheme !== "Bearer" || !token) {
       return res
         .status(401)
-        .json({ message: "Token faltante (Authorization Bearer)" });
+        .json({ message: "Falta Authorization Bearer token" });
     }
 
-    let email = null;
-
-    // 1) Probar como ID token
+    // 2) Verificar y decodificar tu JWT
+    let payload;
     try {
-      const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-      const payload = ticket.getPayload();
-      email = payload?.email || null;
-      log("ID token OK:", email);
-    } catch {
-      // 2) Probar como access_token -> /userinfo
-      try {
-        const { data } = await axios.get(
-          "https://www.googleapis.com/oauth2/v3/userinfo",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        email = data?.email || null;
-        log("access_token OK:", email);
-      } catch {
-        return res
-          .status(401)
-          .json({ message: "Token inválido (no es ID token ni access_token)" });
-      }
+      payload = jwt.verify(token, process.env.JWT_SECRET);
+      // payload esperado: { sub, email, rol, iat, exp }
+    } catch (err) {
+      const reason =
+        err?.name === "TokenExpiredError"
+          ? "Token vencido"
+          : err?.name === "JsonWebTokenError"
+          ? "Token inválido"
+          : "No se pudo verificar el token";
+      return res.status(401).json({ message: reason });
     }
+
+    const email = String(payload?.email || "")
+      .trim()
+      .toLowerCase();
+    const rol = String(payload?.rol || "");
 
     if (!email) {
-      return res
-        .status(401)
-        .json({ message: "No se pudo obtener el email desde el token" });
+      return res.status(401).json({ message: "Token sin email" });
     }
 
-    // SUPERADMINS
+    // 3) SUPERADMINS (bypass de rol, útil para emergencia)
     const supers = (process.env.SUPERADMINS || "")
       .split(",")
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean);
 
-    if (supers.includes(email.toLowerCase())) {
+    if (supers.includes(email)) {
+      // upsert como admin si no existe
       const user = await User.findOneAndUpdate(
         { email },
         {
           $setOnInsert: { nombre: email, rol: "admin", sector: "sin asignar" },
         },
-        { upsert: true, new: true }
+        { new: true, upsert: true }
       );
       log("SUPERADMIN passthrough:", email);
-      req.user = user;
+      req.user = { id: user._id.toString(), email: user.email, rol: user.rol };
       return next();
     }
 
-    // Validación normal
+    // 4) Validación normal de admin
+    // (aunque el JWT trae rol, corroboramos en DB por si el rol cambió)
     const user = await User.findOne({ email });
     if (!user) {
       log("Usuario no registrado:", email);
@@ -85,12 +74,16 @@ export const checkAdmin = async (req, res, next) => {
       return res.status(403).json({ message: "Acceso denegado (no admin)" });
     }
 
-    req.user = user;
+    // 5) Adjunto user “ligero” al request
+    req.user = { id: user._id.toString(), email: user.email, rol: user.rol };
     next();
   } catch (err) {
-    log("Error en checkAdmin:", err?.message);
+    log("Error en checkAdmin:", err?.message || err);
     return res
       .status(500)
-      .json({ message: "Error de autenticación", detail: err?.message });
+      .json({
+        message: "Error de autenticación",
+        detail: err?.message || "unknown",
+      });
   }
 };
