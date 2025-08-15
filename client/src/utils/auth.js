@@ -1,4 +1,4 @@
-export const getToken = () => localStorage.getItem("google_token");
+export const getToken = () => localStorage.getItem("session_token");
 
 export const getUser = () => ({
   nombre: localStorage.getItem("usuario_nombre") || "",
@@ -8,12 +8,13 @@ export const getUser = () => ({
 export const isLoggedIn = () => !!getToken();
 
 export const logout = () => {
-  localStorage.removeItem("google_token");
+  localStorage.removeItem("session_token");
   localStorage.removeItem("usuario_nombre");
   localStorage.removeItem("usuario_rol");
   window.location.href = "/";
 };
+
 export function getAuthHeaders() {
-  const t = localStorage.getItem("google_access_token");
+  const t = localStorage.getItem("session_token");
   return t ? { Authorization: `Bearer ${t}` } : {};
 }
