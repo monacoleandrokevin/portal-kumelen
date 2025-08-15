@@ -4,14 +4,10 @@ import { AuthContext } from "./auth-context";
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
-  // Cargar sesión al iniciar (migrando claves viejas si quedaron)
+  // Cargar sesión al iniciar (y limpiar claves viejas)
   useEffect(() => {
-    if (localStorage.getItem("google_access_token")) {
-      localStorage.removeItem("google_access_token");
-    }
-    if (localStorage.getItem("google_token")) {
-      localStorage.removeItem("google_token");
-    }
+    localStorage.removeItem("google_access_token");
+    localStorage.removeItem("google_token");
 
     const token = localStorage.getItem("session_token");
     const role = localStorage.getItem("usuario_rol");

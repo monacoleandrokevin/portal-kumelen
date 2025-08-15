@@ -5,25 +5,52 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 
-function Landing() {
+const API = import.meta.env.VITE_API_URL;
+
+export default function Landing() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
 
+  async function warmup() {
+    try {
+      await axios.get(`${API}/health`, { timeout: 4000 });
+    } catch (err) {
+      // Ignoramos error de wake-up, pero lo registramos en modo desarrollo
+      if (import.meta.env.DEV) {
+        console.debug(
+          "Warmup falló (normal si server está dormido):",
+          err.message
+        );
+      }
+    }
+  }
+
   const doLogin = async (accessToken) => {
     try {
       setLoading(true);
+      await warmup();
+
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 15000);
+      const t = setTimeout(() => controller.abort(), 30000);
 
       const { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/auth/google`,
+        `${API}/auth/google`,
         { access_token: accessToken },
-        { signal: controller.signal, timeout: 15000 }
+        { signal: controller.signal, timeout: 30000 }
       );
       clearTimeout(t);
 
-      authLogin({ name: data.nombre, role: data.role, token: data.token });
+      // Importante: el backend devuelve { nombre, email, rol, token? }
+      // Usamos JWT propio si viene; si no, caemos al access_token de Google.
+      const sessionToken = data.token || accessToken;
+
+      authLogin({
+        name: data.nombre || "",
+        role: data.rol, // el backend usa 'rol' (español)
+        token: sessionToken, // guarda en session_token
+      });
+
       navigate("/inicio", { replace: true });
     } catch (err) {
       const isAbort =
@@ -85,5 +112,3 @@ function Landing() {
     </main>
   );
 }
-
-export default Landing;
