@@ -12,11 +12,19 @@ const vinculoSchema = new mongoose.Schema(
 const userSchema = new mongoose.Schema(
   {
     nombre: String,
-    email: { type: String, required: true, unique: true },
-    rol: { type: String, default: "empleado" }, // acceso al sistema
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    rol: { type: String, enum: ["admin", "empleado"], default: "empleado" },
     vinculos: { type: [vinculoSchema], default: [] },
   },
   { timestamps: true }
 );
+
+userSchema.index({ email: 1 }, { unique: true });
 
 export const User = mongoose.model("User", userSchema);

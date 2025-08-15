@@ -16,14 +16,21 @@ import usersRoutes from "./routes/users.js";
 
 dotenv.config();
 
-// ⛔️ Arrancar sólo si hay secret
-if (!process.env.JWT_SECRET) {
-  console.error("❌ JWT_SECRET no está definido. Configuralo en el entorno.");
+// Requisitos mínimos de entorno
+const REQUIRED = [
+  "MONGO_URI",
+  "GOOGLE_CLIENT_ID",
+  "JWT_SECRET",
+  "PERMITIDO_DOMINIO",
+];
+const missing = REQUIRED.filter((k) => !process.env[k]);
+if (missing.length) {
+  console.error("Faltan variables de entorno:", missing.join(", "));
   process.exit(1);
 }
 
-// ===== Mongo =====
-mongoose
+// Mongo
+await mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Conectado a MongoDB Atlas"))
   .catch((err) => {
@@ -34,42 +41,40 @@ mongoose
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// ===== CORS =====
+// CORS (antes de helmet)
 const allowedOrigins = [
   process.env.FRONTEND_URL, // ej: https://portal-kumelen.vercel.app
   "https://portal-kumelen.vercel.app",
   "http://localhost:5173",
 ].filter(Boolean);
 
-const corsConfig = {
+const corsCfg = {
   origin(origin, cb) {
-    // permitir llamadas sin Origin (curl/monitores) y orígenes whitelisted
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error("Not allowed by CORS"));
   },
   methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: false, // usás Bearer, no cookies
+  credentials: false,
 };
 
-app.use(cors(corsConfig));
-app.options("*", cors(corsConfig));
+app.use(cors(corsCfg));
+app.options("*", cors(corsCfg));
 
-// ===== Seguridad base =====
+// Helmet
 app.use(
   helmet({
-    // si servís assets entre dominios, mantené esto en false
     crossOriginResourcePolicy: false,
   })
 );
 
-// ===== Body parser =====
+// Body parser
 app.use(express.json({ limit: "1mb" }));
 
-// ===== Healthcheck =====
+// Healthcheck
 app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
 
-// ===== Rate limit para auth =====
+// Rate-limit auth
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,
@@ -78,18 +83,18 @@ const authLimiter = rateLimit({
 });
 app.use("/auth", authLimiter);
 
-// ===== Rutas =====
+// Rutas públicas/protegidas
 app.use("/users", usersRoutes);
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+// Login con Google → emite JWT propio
 app.post("/auth/google", async (req, res) => {
   const { token, access_token } = req.body || {};
   try {
     let email, name;
 
     if (token) {
-      // ID token
       const ticket = await googleClient.verifyIdToken({
         idToken: token,
         audience: process.env.GOOGLE_CLIENT_ID,
@@ -98,7 +103,6 @@ app.post("/auth/google", async (req, res) => {
       email = payload?.email;
       name = payload?.name || "";
     } else if (access_token) {
-      // Access token -> /userinfo
       const { data } = await axios.get(
         "https://www.googleapis.com/oauth2/v3/userinfo",
         { headers: { Authorization: `Bearer ${access_token}` } }
@@ -121,15 +125,12 @@ app.post("/auth/google", async (req, res) => {
     const dominio = String(process.env.PERMITIDO_DOMINIO || "")
       .trim()
       .toLowerCase();
-
-    // Dominio institucional
     if (!dominio || !emailNorm.endsWith(`@${dominio}`)) {
       return res
         .status(403)
         .json({ message: "Acceso denegado. Solo correos institucionales." });
     }
 
-    // Lista blanca
     const autorizado = await Autorizado.findOne({ email: emailNorm });
     if (!autorizado) {
       return res
@@ -137,7 +138,6 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "Este correo no está habilitado para ingresar." });
     }
 
-    // Usuario
     let usuario = await User.findOne({ email: emailNorm });
     if (!usuario) {
       usuario = await User.create({
@@ -145,44 +145,49 @@ app.post("/auth/google", async (req, res) => {
         email: emailNorm,
         rol: "empleado",
       });
-      console.log("＋ Usuario creado:", usuario.email);
     }
 
-    // 🔹 Generar JWT propio
-    const jwtPayload = {
+    const payload = {
       sub: usuario._id.toString(),
       email: usuario.email,
       rol: usuario.rol,
     };
-    const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET, {
+    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN || "2h",
     });
 
     return res.status(200).json({
-      token: jwtToken, // <- tu JWT
+      token: jwtToken,
       nombre: usuario.nombre,
       email: usuario.email,
       rol: usuario.rol,
     });
   } catch (error) {
     const msg = error?.response?.data || error?.message || "unknown";
-    console.error("× Error en /auth/google:", msg);
     return res.status(401).json({ message: "Token inválido", error: msg });
   }
 });
 
-// Cambiar rol (admin)
+// Cambiar rol
+import mongoosePkg from "mongoose";
+const { Types } = mongoosePkg;
+
+app.patch("/autorizados/:id", checkAdmin, async (req, res) => {
+  return res
+    .status(405)
+    .json({
+      message: "Usá POST /autorizados para crear o DELETE para eliminar.",
+    });
+});
+
 app.patch("/users/:id/rol", checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { nuevoRol } = req.body || {};
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!Types.ObjectId.isValid(id))
       return res.status(400).json({ message: "id inválido" });
-    }
-    if (!["admin", "empleado"].includes(nuevoRol)) {
+    if (!["admin", "empleado"].includes(nuevoRol))
       return res.status(422).json({ message: "rol inválido" });
-    }
 
     const user = await User.findByIdAndUpdate(
       id,
@@ -193,25 +198,23 @@ app.patch("/users/:id/rol", checkAdmin, async (req, res) => {
       return res.status(404).json({ message: "Usuario no encontrado" });
 
     res.json({ message: "Rol actualizado", usuario: user });
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Error al actualizar rol" });
   }
 });
 
-// Actualizar vínculos (admin)
+// Actualizar vínculos
 app.patch("/users/:id/vinculos", checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { nuevosVinculos } = req.body || {};
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!Types.ObjectId.isValid(id))
       return res.status(400).json({ message: "id inválido" });
-    }
-    if (!Array.isArray(nuevosVinculos)) {
+    if (!Array.isArray(nuevosVinculos))
       return res
         .status(422)
         .json({ message: "El formato de vínculos es inválido" });
-    }
 
     const user = await User.findByIdAndUpdate(
       id,
@@ -222,17 +225,17 @@ app.patch("/users/:id/vinculos", checkAdmin, async (req, res) => {
       return res.status(404).json({ message: "Usuario no encontrado" });
 
     res.json({ message: "Vínculos actualizados", usuario: user });
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Error al actualizar vínculos" });
   }
 });
 
-// CRUD Autorizados (admin)
+// CRUD Autorizados
 app.get("/autorizados", checkAdmin, async (_req, res) => {
   try {
     const lista = await Autorizado.find({}, "-__v");
     res.json(lista);
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Error al obtener autorizados" });
   }
 });
@@ -253,13 +256,12 @@ app.post("/autorizados", checkAdmin, async (req, res) => {
     }
 
     const yaExiste = await Autorizado.findOne({ email: emailNorm });
-    if (yaExiste) {
+    if (yaExiste)
       return res.status(409).json({ message: "Este email ya está autorizado" });
-    }
 
     const nuevo = await Autorizado.create({ email: emailNorm });
     res.status(201).json({ message: "Autorizado creado", autorizado: nuevo });
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Error al crear autorizado" });
   }
 });
@@ -267,15 +269,14 @@ app.post("/autorizados", checkAdmin, async (req, res) => {
 app.delete("/autorizados/:id", checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!Types.ObjectId.isValid(id))
       return res.status(400).json({ message: "id inválido" });
-    }
 
     const eliminado = await Autorizado.findByIdAndDelete(id);
     if (!eliminado) return res.status(404).json({ message: "No encontrado" });
 
     res.json({ message: "Autorizado eliminado", eliminado });
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Error al eliminar autorizado" });
   }
 });
