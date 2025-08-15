@@ -1,24 +1,19 @@
+// client/src/lib/api.js
 import axios from "axios";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
-// Adjunta tu JWT (session_token) a cada request
-// client/src/lib/api.js
+// Adjunta tu JWT en cada request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("session_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-    console.debug("[api] Bearer enviado:", token.slice(0, 12) + "…"); // <-- TEMP
-  } else {
-    console.debug("[api] sin token"); // <-- TEMP
-    delete config.headers.Authorization;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  else delete config.headers.Authorization;
   return config;
 });
 
-// Manejo automático de 401: limpiar sesión y redirigir al login
+// Si expira o es inválido, limpiamos sesión y mandamos a login
 api.interceptors.response.use(
   (res) => res,
   (err) => {
