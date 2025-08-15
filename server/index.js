@@ -28,14 +28,6 @@ mongoose
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// ===== Seguridad base =====
-app.use(
-  helmet({
-    // si servís assets entre dominios, mantené esto en false
-    crossOriginResourcePolicy: false,
-  })
-);
-
 // ===== CORS =====
 const allowedOrigins = [
   process.env.FRONTEND_URL, // ej: https://portal-kumelen.vercel.app
@@ -56,6 +48,14 @@ const corsConfig = {
 
 app.use(cors(corsConfig));
 app.options("*", cors(corsConfig));
+
+// ===== Seguridad base =====
+app.use(
+  helmet({
+    // si servís assets entre dominios, mantené esto en false
+    crossOriginResourcePolicy: false,
+  })
+);
 
 // ===== Body parser =====
 app.use(express.json({ limit: "1mb" }));
