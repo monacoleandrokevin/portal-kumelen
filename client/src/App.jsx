@@ -1,5 +1,5 @@
 // client/src/App.jsx
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import AuthProvider from "./context/AuthProvider";
 
 import Landing from "./pages/Landing";
@@ -8,30 +8,33 @@ import Admin from "./pages/Admin";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
+import ShellLayout from "./layouts/ShellLayout";
 
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
+        {/* Login: sin navbar */}
         <Route path="/" element={<Landing />} />
 
+        {/* Todo lo demás: con navbar */}
         <Route
-          path="/inicio"
           element={
             <ProtectedRoute>
-              <Inicio />
+              <ShellLayout />
             </ProtectedRoute>
           }
-        />
-
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <Admin />
-            </AdminRoute>
-          }
-        />
+        >
+          <Route path="/inicio" element={<Inicio />} />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <Admin />
+              </AdminRoute>
+            }
+          />
+        </Route>
 
         <Route path="*" element={<Landing />} />
       </Routes>
