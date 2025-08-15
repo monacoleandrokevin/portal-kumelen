@@ -12,17 +12,18 @@ export default function Landing() {
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
 
+  // Ping para despertar el server (Render) antes del login
   async function warmup() {
     try {
       await axios.get(`${API}/health`, { timeout: 4000 });
     } catch (err) {
-      // Ignoramos error de wake-up, pero lo registramos en modo desarrollo
       if (import.meta.env.DEV) {
         console.debug(
           "Warmup falló (normal si server está dormido):",
-          err.message
+          err?.message
         );
       }
+      // no-op
     }
   }
 
@@ -32,7 +33,7 @@ export default function Landing() {
       await warmup();
 
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 30000);
+      const t = setTimeout(() => controller.abort(), 30000); // 30s primer hit
 
       const { data } = await axios.post(
         `${API}/auth/google`,
@@ -41,10 +42,14 @@ export default function Landing() {
       );
       clearTimeout(t);
 
+      // Backend devuelve { nombre, email, rol, token? }
+      // Usá tu JWT si viene; si no, caé al access_token de Google (fallback temporal).
+      const sessionToken = data.token || accessToken;
+
       authLogin({
-        name: data.nombre,
-        role: data.rol,
-        token: data.token || accessToken,
+        name: data.nombre || "",
+        role: data.rol, // backend usa 'rol'
+        token: sessionToken, // se guarda como session_token
       });
 
       navigate("/inicio", { replace: true });

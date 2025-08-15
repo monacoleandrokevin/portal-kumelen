@@ -6,6 +6,7 @@ export default function AuthProvider({ children }) {
 
   // Cargar sesión al iniciar (y limpiar claves viejas)
   useEffect(() => {
+    // limpia restos del flujo viejo
     localStorage.removeItem("google_access_token");
     localStorage.removeItem("google_token");
 
