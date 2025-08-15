@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const vinculoSchema = new mongoose.Schema(
   {
-    edificio: { type: String, required: true },
-    nivel: { type: [String], required: true }, // ej: ["inicial", "primario"]
-    rol: { type: String, required: true }, // "docente" o "no docente"
+    edificio: { type: String, default: [] },
+    nivel: { type: [String], default: [] }, // ej: ["inicial", "primario"]
+    rol: { type: String, default: [] }, // "docente" o "no docente"
   },
   { _id: false }
 );

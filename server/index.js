@@ -7,10 +7,13 @@ import dotenv from "dotenv";
 import axios from "axios";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import mongoosePkg from "mongoose";
 import { OAuth2Client } from "google-auth-library";
 
 import { User } from "./models/User.js";
 import { Autorizado } from "./models/Autorizado.js";
+import { isAllowedByWorkspace } from "./lib/workspaceAccess.js";
+import { listAllowedUsers } from "./lib/workspaceAccess.js";
 import { checkAdmin } from "./middleware/checkAdmin.js";
 import usersRoutes from "./routes/users.js";
 
@@ -57,6 +60,8 @@ const corsCfg = {
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: false,
 };
+
+const { Types } = mongoosePkg;
 
 app.use(cors(corsCfg));
 app.options("*", cors(corsCfg));
@@ -131,11 +136,12 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "Acceso denegado. Solo correos institucionales." });
     }
 
-    const autorizado = await Autorizado.findOne({ email: emailNorm });
-    if (!autorizado) {
-      return res
-        .status(403)
-        .json({ message: "Este correo no está habilitado para ingresar." });
+    // Política de acceso basada en Workspace (OU y/o Grupo)
+    const allowed = await isAllowedByWorkspace(emailNorm);
+    if (!allowed) {
+      return res.status(403).json({
+        message: "Tu cuenta no tiene acceso (política de Workspace).",
+      });
     }
 
     let usuario = await User.findOne({ email: emailNorm });
@@ -168,16 +174,10 @@ app.post("/auth/google", async (req, res) => {
   }
 });
 
-// Cambiar rol
-import mongoosePkg from "mongoose";
-const { Types } = mongoosePkg;
-
 app.patch("/autorizados/:id", checkAdmin, async (req, res) => {
-  return res
-    .status(405)
-    .json({
-      message: "Usá POST /autorizados para crear o DELETE para eliminar.",
-    });
+  return res.status(405).json({
+    message: "Usá POST /autorizados para crear o DELETE para eliminar.",
+  });
 });
 
 app.patch("/users/:id/rol", checkAdmin, async (req, res) => {
@@ -240,6 +240,15 @@ app.get("/autorizados", checkAdmin, async (_req, res) => {
   }
 });
 
+app.get("/workspace/usuarios", checkAdmin, async (_req, res) => {
+  try {
+    const lista = await listAllowedUsers(); // [{ email, name, orgUnitPath }]
+    res.json(lista);
+  } catch (e) {
+    res.status(500).json({ message: "Error al listar usuarios de Workspace" });
+  }
+});
+
 app.post("/autorizados", checkAdmin, async (req, res) => {
   try {
     const emailNorm = String(req.body?.email || "")
@@ -278,6 +287,64 @@ app.delete("/autorizados/:id", checkAdmin, async (req, res) => {
     res.json({ message: "Autorizado eliminado", eliminado });
   } catch {
     res.status(500).json({ message: "Error al eliminar autorizado" });
+  }
+});
+
+app.post("/workspace/sync", checkAdmin, async (_req, res) => {
+  try {
+    const lista = await listAllowedUsers();
+    let created = 0,
+      updated = 0;
+
+    for (const u of lista) {
+      const email = u.email.toLowerCase().trim();
+      const nombre = u.name || email;
+      const found = await User.findOne({ email });
+      if (!found) {
+        await User.create({ nombre, email, rol: "empleado" });
+        created++;
+      } else {
+        // actualizá nombre si querés mantener sincronizado
+        if (found.nombre !== nombre) {
+          found.nombre = nombre;
+          await found.save();
+          updated++;
+        }
+      }
+    }
+
+    res.json({ message: "Sync OK", created, updated, total: lista.length });
+  } catch (e) {
+    res.status(500).json({ message: "Error al sincronizar usuarios" });
+  }
+});
+
+app.patch("/users/:id/metadata", checkAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { edificios, niveles } = req.body || {};
+
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "id inválido" });
+    }
+    if (edificios && !Array.isArray(edificios)) {
+      return res.status(422).json({ message: "edificios debe ser array" });
+    }
+    if (niveles && !Array.isArray(niveles)) {
+      return res.status(422).json({ message: "niveles debe ser array" });
+    }
+
+    const update = {};
+    if (edificios) update.edificios = edificios.map(String);
+    if (niveles) update.niveles = niveles.map(String);
+
+    const user = await User.findByIdAndUpdate(id, update, { new: true });
+    if (!user)
+      return res.status(404).json({ message: "Usuario no encontrado" });
+
+    res.json({ message: "Metadatos actualizados", usuario: user });
+  } catch {
+    res.status(500).json({ message: "Error al actualizar metadatos" });
   }
 });
 
