@@ -23,7 +23,7 @@ function Landing() {
       );
       clearTimeout(t);
 
-      authLogin({ name: data.nombre, role: data.rol, token: data.token });
+      authLogin({ name: data.nombre, role: data.role, token: data.token });
       navigate("/inicio", { replace: true });
     } catch (err) {
       const isAbort =
