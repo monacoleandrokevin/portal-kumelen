@@ -16,6 +16,12 @@ import usersRoutes from "./routes/users.js";
 
 dotenv.config();
 
+// ⛔️ Arrancar sólo si hay secret
+if (!process.env.JWT_SECRET) {
+  console.error("❌ JWT_SECRET no está definido. Configuralo en el entorno.");
+  process.exit(1);
+}
+
 // ===== Mongo =====
 mongoose
   .connect(process.env.MONGO_URI)
