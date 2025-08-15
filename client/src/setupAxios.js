@@ -1,28 +1,26 @@
+// Config global de Axios — afecta a TODAS las importaciones de axios
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-});
+// API base del backend
+axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 
-// Adjunta tu JWT (session_token) a cada request
-// client/src/lib/api.js
-api.interceptors.request.use((config) => {
+// Agrega el JWT propio a cada request
+axios.interceptors.request.use((config) => {
   const token = localStorage.getItem("session_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-    console.debug("[api] Bearer enviado:", token.slice(0, 12) + "…"); // <-- TEMP
   } else {
-    console.debug("[api] sin token"); // <-- TEMP
     delete config.headers.Authorization;
   }
   return config;
 });
 
-// Manejo automático de 401: limpiar sesión y redirigir al login
-api.interceptors.response.use(
+// Si el token no sirve/expiró → limpiamos y mandamos a login
+axios.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err?.response?.status === 401) {
+    const status = err?.response?.status;
+    if (status === 401) {
       localStorage.removeItem("session_token");
       localStorage.removeItem("usuario_nombre");
       localStorage.removeItem("usuario_rol");
@@ -31,5 +29,3 @@ api.interceptors.response.use(
     return Promise.reject(err);
   }
 );
-
-export default api;

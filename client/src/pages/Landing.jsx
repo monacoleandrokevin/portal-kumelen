@@ -41,14 +41,10 @@ export default function Landing() {
       );
       clearTimeout(t);
 
-      // Importante: el backend devuelve { nombre, email, rol, token? }
-      // Usamos JWT propio si viene; si no, caemos al access_token de Google.
-      const sessionToken = data.token || accessToken;
-
       authLogin({
-        name: data.nombre || "",
-        role: data.rol, // el backend usa 'rol' (español)
-        token: sessionToken, // guarda en session_token
+        name: data.nombre,
+        role: data.rol,
+        token: data.token || accessToken,
       });
 
       navigate("/inicio", { replace: true });
