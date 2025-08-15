@@ -12,35 +12,29 @@ import AdminRoute from "./components/AdminRoute";
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Login */}
-          <Route path="/" element={<Landing />} />
+      <Routes>
+        <Route path="/" element={<Landing />} />
 
-          {/* Rutas protegidas (sesión requerida) */}
-          <Route
-            path="/inicio"
-            element={
-              <ProtectedRoute>
-                <Inicio />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/inicio"
+          element={
+            <ProtectedRoute>
+              <Inicio />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Solo admin */}
-          <Route
-            path="/admin"
-            element={
-              <AdminRoute>
-                <Admin />
-              </AdminRoute>
-            }
-          />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <Admin />
+            </AdminRoute>
+          }
+        />
 
-          {/* fallback */}
-          <Route path="*" element={<Landing />} />
-        </Routes>
-      </BrowserRouter>
+        <Route path="*" element={<Landing />} />
+      </Routes>
     </AuthProvider>
   );
 }
