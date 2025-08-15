@@ -77,9 +77,6 @@ app.use("/users", usersRoutes);
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Login con Google (mantiene tu flujo actual: devuelve datos del usuario)
-import jwt from "jsonwebtoken";
-
 app.post("/auth/google", async (req, res) => {
   const { token, access_token } = req.body || {};
   try {
