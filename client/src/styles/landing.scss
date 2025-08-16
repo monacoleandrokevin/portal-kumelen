@@ -163,8 +163,8 @@ $naranja-escuela: #f2b03d; // intermedio para transición
 /* En pantallas chicas (hasta 576px), agrandá la card */
 @media (max-width: 576px) {
   .landing .login-card {
-    width: 95vw; /* ocupa más del viewport */
-    max-width: none; /* anula el límite de 420px */
+    width: 96vw !important; /* llená casi todo */
+    max-width: none !important;
   }
 }
 

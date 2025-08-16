@@ -108,7 +108,7 @@ export default function Landing() {
     <main className="landing d-flex min-vh-100">
       <div className="container-fluid">
         <div className="row g-0">
-          <div className="col-12 d-flex align-items-center justify-content-center p-4 p-md-5">
+          <div className="col-12 d-flex align-items-center justify-content-center px-2 px-sm-3 py-4 py-md-5">
             <div className="login-card">
               <div className="brand mb-4 text-center">
                 <div className="logo-circle">
