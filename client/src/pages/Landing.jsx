@@ -72,19 +72,14 @@ export default function Landing() {
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (t) => {
-      // 1) preferimos access_token (flujo actual)
-      if (t?.access_token) {
-        return doLogin(t.access_token);
-      }
+      // 1) Preferimos access_token
+      if (t?.access_token) return doLogin(t.access_token);
 
-      // 2) fallback: si el proveedor te da code/credential (id_token),
-      //    lo usamos con la rama 'token' del backend
-      const idToken = t?.credential || t?.code || t?.id_token;
-      if (idToken) {
-        return doLoginWithIdToken(idToken);
-      }
+      // 2) Fallback: id_token (distintas libs lo exponen como credential / id_token / code)
+      const idt = t?.credential || t?.id_token || t?.code;
+      if (idt) return doLoginWithIdToken(idt);
 
-      alert("No se obtuvo access_token de Google. Reintentá.");
+      alert("No se obtuvo token de Google. Reintentá.");
     },
     onError: () => alert("Error en el login"),
     scope: "openid email profile",
@@ -94,22 +89,35 @@ export default function Landing() {
   async function doLoginWithIdToken(idToken) {
     try {
       setLoading(true);
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 30000);
+
       const { data } = await axios.post(
         `${API}/auth/google`,
-        { token: idToken }, // <-- acá va 'token' (ID token)
-        { timeout: 30000 }
+        { token: idToken }, // << usa la rama 'token' (ID token) en el backend
+        { signal: controller.signal, timeout: 30000 }
       );
+      clearTimeout(t);
 
-      const sessionToken = data.token; // tu JWT propio
+      const sessionToken = data.token || idToken;
       authLogin({
         name: data.nombre || "",
         role: data.rol,
         token: sessionToken,
       });
-
       navigate("/inicio", { replace: true });
-    } catch (e) {
-      alert(e.response?.data?.message || "Error al autenticar");
+    } catch (err) {
+      const isAbort =
+        err.name === "CanceledError" || err.code === "ECONNABORTED";
+      if (isAbort) {
+        alert("El servidor está iniciando… Reintentá en unos segundos.");
+        return;
+      }
+      const msg = err.response?.data?.message || "Error al autenticar";
+      const det = err.response?.data?.error
+        ? `\nDetalle: ${JSON.stringify(err.response.data.error)}`
+        : "";
+      alert(msg + det);
     } finally {
       setLoading(false);
     }
