@@ -4,15 +4,15 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
-import axios from "axios";
 import jwt from "jsonwebtoken";
+import axios from "axios";
 import mongoose from "mongoose";
 import mongoosePkg from "mongoose";
 import { OAuth2Client } from "google-auth-library";
 
 import { User } from "./models/User.js";
 import { Autorizado } from "./models/Autorizado.js";
-import { isAllowedByWorkspace } from "./lib/workspaceAccess.js";
+import { isAllowedByWorkspace } from "./services/workspace.js";
 import { listAllowedUsers } from "./lib/workspaceAccess.js";
 import { checkAdmin } from "./middleware/checkAdmin.js";
 import usersRoutes from "./routes/users.js";
@@ -97,19 +97,11 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Login con Google → emite JWT propio
 app.post("/auth/google", async (req, res) => {
   const { token, access_token } = req.body || {};
-  if (!token && !access_token) {
-    return res
-      .status(400)
-      .json({ message: "Falta token de Google (token o access_token)" });
-  }
-  if (access_token && typeof access_token !== "string") {
-    return res.status(400).json({ message: "access_token inválido" });
-  }
-
   try {
     let email, name;
 
     if (token) {
+      // ID token → verificar firma
       const ticket = await googleClient.verifyIdToken({
         idToken: token,
         audience: process.env.GOOGLE_CLIENT_ID,
@@ -118,14 +110,10 @@ app.post("/auth/google", async (req, res) => {
       email = payload?.email;
       name = payload?.name || "";
     } else if (access_token) {
-      // Access token -> OIDC userinfo (más consistente que oauth2/v3)
+      // Access token → OIDC userinfo (recomendado)
       const { data } = await axios.get(
         "https://openidconnect.googleapis.com/v1/userinfo",
-        {
-          headers: { Authorization: `Bearer ${access_token}` },
-          timeout: 8000,
-          // validateStatus: (s) => s < 500, // opcional: que 401/403 pasen al catch con response
-        }
+        { headers: { Authorization: `Bearer ${access_token}` }, timeout: 8000 }
       );
       email = data?.email;
       name = data?.name || data?.given_name || "";
@@ -141,26 +129,36 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "No se pudo obtener el email desde Google" });
     }
 
+    // Dominio institucional (si lo usás)
     const emailNorm = String(email).trim().toLowerCase();
     const dominio = String(process.env.PERMITIDO_DOMINIO || "")
       .trim()
       .toLowerCase();
-    if (!dominio || !emailNorm.endsWith(`@${dominio}`)) {
+    if (dominio && !emailNorm.endsWith(`@${dominio}`)) {
       return res
         .status(403)
         .json({ message: "Acceso denegado. Solo correos institucionales." });
     }
 
-    // Política de acceso basada en Workspace (OU y/o Grupo)
-    const allowed = await isAllowedByWorkspace(emailNorm);
-    if (!allowed) {
-      return res.status(403).json({
-        message: "Tu cuenta no tiene acceso (política de Workspace).",
-      });
+    // Política de Workspace (OU / grupos)
+    const okPolicy = await isAllowedByWorkspace(emailNorm);
+    if (!okPolicy) {
+      return res
+        .status(403)
+        .json({
+          message: "Tu cuenta no tiene acceso (política de Workspace).",
+        });
     }
 
+    // Alta/lookup de usuario propio
     let usuario = await User.findOne({ email: emailNorm });
     if (!usuario) {
+      const ya = await Autorizado.findOne({ email: emailNorm });
+      if (!ya) {
+        return res
+          .status(403)
+          .json({ message: "Este correo no está habilitado para ingresar." });
+      }
       usuario = await User.create({
         nombre: name,
         email: emailNorm,
@@ -168,32 +166,34 @@ app.post("/auth/google", async (req, res) => {
       });
     }
 
-    const payload = {
-      sub: usuario._id.toString(),
-      email: usuario.email,
-      rol: usuario.rol,
-    };
-    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || "2h",
-    });
+    // Emitir sesión propia (JWT) – evita revalidar con Google en cada request
+    const sessionToken = jwt.sign(
+      { sub: String(usuario._id), email: usuario.email, role: usuario.rol },
+      process.env.JWT_SECRET,
+      { expiresIn: "8h", issuer: "portal-kumelen" }
+    );
 
     return res.status(200).json({
-      token: jwtToken,
       nombre: usuario.nombre,
       email: usuario.email,
       rol: usuario.rol,
+      token: sessionToken,
     });
   } catch (error) {
-    const errData = error?.response?.data;
-    const errMsg =
-      errData?.error_description ||
-      errData?.error ||
-      error?.message ||
-      "unknown";
-    console.error("× Error en /auth/google:", errMsg, errData || "");
-    return res.status(401).json({
-      message: "Token inválido",
-      error: errData || errMsg,
+    const src = error?.response?.config?.url || "";
+    const body = error?.response?.data;
+
+    // Si falla userinfo OIDC → token de Google inválido/expirado
+    if (src.includes("openidconnect.googleapis.com")) {
+      return res.status(401).json({
+        message: "Token inválido",
+        error: body || error.message || "oidc_userinfo_failed",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Error en autenticación",
+      error: body || error.message || "unknown",
     });
   }
 });

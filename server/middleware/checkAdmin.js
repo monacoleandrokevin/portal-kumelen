@@ -1,58 +1,76 @@
 // server/middleware/checkAdmin.js
 import jwt from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
+import axios from "axios";
 import { User } from "../models/User.js";
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const checkAdmin = async (req, res, next) => {
   try {
-    const auth = req.headers.authorization || "";
-    const [scheme, token] = auth.split(" ");
-    if (scheme !== "Bearer" || !token) {
+    const bearer = req.headers.authorization || "";
+    const token = bearer.startsWith("Bearer ") ? bearer.slice(7) : null;
+    if (!token) {
       return res
         .status(401)
-        .json({ message: "Falta Authorization Bearer token" });
+        .json({ message: "Token faltante (Authorization Bearer)" });
     }
 
-    let payload;
+    // 1) Intentar JWT propio
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET);
-    } catch {
-      return res.status(401).json({ message: "Token inválido o vencido" });
-    }
-
-    const email = String(payload?.email || "")
-      .trim()
-      .toLowerCase();
-    if (!email) return res.status(401).json({ message: "Token sin email" });
-
-    // SUPERADMINS (bypass)
-    const supers = (process.env.SUPERADMINS || "")
-      .split(",")
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean);
-
-    if (supers.includes(email)) {
-      const user = await User.findOneAndUpdate(
-        { email },
-        {
-          $setOnInsert: { nombre: email, rol: "admin", sector: "sin asignar" },
-        },
-        { new: true, upsert: true }
-      );
-      req.user = { id: user._id.toString(), email: user.email, rol: user.rol };
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findOne({ email: payload.email });
+      if (!user)
+        return res.status(403).json({ message: "Usuario no registrado" });
+      if (user.rol !== "admin")
+        return res.status(403).json({ message: "Acceso denegado (no admin)" });
+      req.user = user;
       return next();
+    } catch {
+      /* continúa con verificación Google */
     }
 
-    // Validación normal (corroboramos rol actual en DB)
-    const user = await User.findOne({ email });
-    if (!user)
-      return res.status(403).json({ message: "Usuario no registrado" });
-    if (user.rol !== "admin") {
-      return res.status(403).json({ message: "Acceso denegado (no admin)" });
+    // 2) Token de Google (ID token)
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const email = ticket.getPayload()?.email;
+      const user = await User.findOne({ email });
+      if (!user)
+        return res.status(403).json({ message: "Usuario no registrado" });
+      if (user.rol !== "admin")
+        return res.status(403).json({ message: "Acceso denegado (no admin)" });
+      req.user = user;
+      return next();
+    } catch {
+      // 3) Access token de Google → OIDC userinfo
+      try {
+        const { data } = await axios.get(
+          "https://openidconnect.googleapis.com/v1/userinfo",
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 8000 }
+        );
+        const email = data?.email;
+        const user = await User.findOne({ email });
+        if (!user)
+          return res.status(403).json({ message: "Usuario no registrado" });
+        if (user.rol !== "admin")
+          return res
+            .status(403)
+            .json({ message: "Acceso denegado (no admin)" });
+        req.user = user;
+        return next();
+      } catch {
+        return res.status(401).json({
+          message:
+            "Token inválido (ni JWT propio, ni ID token, ni access_token)",
+        });
+      }
     }
-
-    req.user = { id: user._id.toString(), email: user.email, rol: user.rol };
-    next();
   } catch (err) {
-    return res.status(500).json({ message: "Error de autenticación" });
+    return res
+      .status(500)
+      .json({ message: "Error de autenticación", detail: err?.message });
   }
 };
