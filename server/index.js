@@ -96,6 +96,14 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Login con Google → emite JWT propio
 app.post("/auth/google", async (req, res) => {
   const { token, access_token } = req.body || {};
+  if (!token && !access_token) {
+    return res
+      .status(400)
+      .json({ message: "Falta token de Google (token o access_token)" });
+  }
+  if (access_token && typeof access_token !== "string") {
+    return res.status(400).json({ message: "access_token inválido" });
+  }
   try {
     let email, name;
 
@@ -108,9 +116,13 @@ app.post("/auth/google", async (req, res) => {
       email = payload?.email;
       name = payload?.name || "";
     } else if (access_token) {
+      // Access token -> /userinfo
       const { data } = await axios.get(
         "https://www.googleapis.com/oauth2/v3/userinfo",
-        { headers: { Authorization: `Bearer ${access_token}` } }
+        {
+          headers: { Authorization: `Bearer ${access_token}` },
+          timeout: 8000, // opcional
+        }
       );
       email = data?.email;
       name = data?.name || data?.given_name || "";

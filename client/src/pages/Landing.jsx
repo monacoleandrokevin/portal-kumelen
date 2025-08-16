@@ -71,11 +71,49 @@ export default function Landing() {
   };
 
   const googleLogin = useGoogleLogin({
-    onSuccess: (t) => doLogin(t.access_token),
+    onSuccess: async (t) => {
+      // 1) preferimos access_token (flujo actual)
+      if (t?.access_token) {
+        return doLogin(t.access_token);
+      }
+
+      // 2) fallback: si el proveedor te da code/credential (id_token),
+      //    lo usamos con la rama 'token' del backend
+      const idToken = t?.credential || t?.code || t?.id_token;
+      if (idToken) {
+        return doLoginWithIdToken(idToken);
+      }
+
+      alert("No se obtuvo access_token de Google. Reintentá.");
+    },
     onError: () => alert("Error en el login"),
     scope: "openid email profile",
     flow: "implicit",
   });
+
+  async function doLoginWithIdToken(idToken) {
+    try {
+      setLoading(true);
+      const { data } = await axios.post(
+        `${API}/auth/google`,
+        { token: idToken }, // <-- acá va 'token' (ID token)
+        { timeout: 30000 }
+      );
+
+      const sessionToken = data.token; // tu JWT propio
+      authLogin({
+        name: data.nombre || "",
+        role: data.rol,
+        token: sessionToken,
+      });
+
+      navigate("/inicio", { replace: true });
+    } catch (e) {
+      alert(e.response?.data?.message || "Error al autenticar");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <main className="landing">
