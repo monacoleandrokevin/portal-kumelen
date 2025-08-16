@@ -3,7 +3,7 @@ $verde-escuela: #058a59; // verde institucional
 $amarillo-suave: #ffd85a; // amarillo más suave, menos saturado
 $naranja-escuela: #f2b03d; // intermedio para transición
 
-/* ——— PORTADA (mobile‑first, una sola columna centrada) ——— */
+/* ——— PORTADA (mobile-first, una sola columna centrada) ——— */
 .landing {
   min-height: 100dvh;
   color: #fff;
@@ -51,35 +51,46 @@ $naranja-escuela: #f2b03d; // intermedio para transición
   place-items: center;
 }
 
-/* Card de login (negro translúcido) */
+/* ——— Card de login ——— */
 .landing .login-card {
+  /* Ancho controlado: mobile ocupa casi todo, en desktop topea */
+  width: min(92vw, 560px);
+  margin-inline: auto;
+
   background: rgba(0, 0, 0, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 24px;
   backdrop-filter: blur(4px);
-
-  .brand img {
-    /* sin altura fija para no “techar” el logo */
-    width: auto;
-    max-width: 100%;
-    object-fit: contain;
-  }
-
-  h1 {
-    color: #fff;
-    font-weight: 700;
-    letter-spacing: 0.2px;
-    margin: 0;
-  }
+  text-align: center; /* centra el contenido de texto e inline */
 }
 
-/* Logo en círculo blanco (controlado y proporcional) */
+.landing .login-card .brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* centrado horizontal */
+}
+
+.landing .login-card .brand img {
+  /* sin altura fija para no “techar” el logo */
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.landing .login-card h1 {
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  margin: 0;
+}
+
+/* ——— Logo en círculo blanco ——— */
 .logo-circle {
   width: 126px;
   height: 126px;
   padding: 10px; /* aire interno; el logo crece con el círculo */
-  background-color: #fff !important; /* blanco puro, sin transparencias */
+  background-color: #fff !important; /* blanco puro */
   border-radius: 50%;
   overflow: hidden;
   display: grid;
@@ -94,7 +105,8 @@ $naranja-escuela: #f2b03d; // intermedio para transición
   object-fit: contain; /* sin deformación */
 }
 
-/* Botón login: transparente, borde blanco, texto blanco, único efecto = scale */
+/* ——— Botón de login ———
+   Transparente, borde blanco, texto blanco, único efecto = scale */
 .login-google-btn {
   -webkit-appearance: none;
   appearance: none;
@@ -103,7 +115,7 @@ $naranja-escuela: #f2b03d; // intermedio para transición
   color: #fff !important; /* texto blanco */
   border-radius: 12px;
   font-weight: 600;
-  padding: 0.6rem 1rem;
+  padding: 0.9rem 1rem; /* un poco más alto para mejor tap target */
   width: 100%;
   display: inline-flex;
   align-items: center;
@@ -112,6 +124,7 @@ $naranja-escuela: #f2b03d; // intermedio para transición
   cursor: pointer;
   transition: transform 0.12s ease;
 }
+
 .login-google-btn:hover {
   transform: scale(1.03);
 }
@@ -134,7 +147,7 @@ $naranja-escuela: #f2b03d; // intermedio para transición
   background: transparent !important;
 }
 
-/* Mejora progresiva en pantallas medianas+ */
+/* ——— Mejora progresiva en pantallas medianas+ ——— */
 @media (min-width: 768px) {
   .landing {
     padding: 24px;
@@ -147,19 +160,9 @@ $naranja-escuela: #f2b03d; // intermedio para transición
   }
 }
 
-/* Respeto por reduce motion */
+/* ——— Respeto por reduce motion ——— */
 @media (prefers-reduced-motion: reduce) {
   .landing {
     animation: none;
   }
-}
-
-.landing .login-card {
-  text-align: center; /* centra el contenido de texto e inline-block */
-}
-
-.landing .login-card .brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* centra horizontalmente */
 }

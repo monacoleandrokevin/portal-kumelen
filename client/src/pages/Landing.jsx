@@ -109,7 +109,7 @@ export default function Landing() {
       <div className="container-fluid">
         <div className="row g-0 min-vh-100">
           <div className="col-12 d-flex align-items-center justify-content-center p-4 p-md-5">
-            <div className="login-card w-100" style={{ maxWidth: 480 }}>
+            <div className="login-card w-100">
               <div className="brand mb-4 text-center">
                 <div className="logo-circle">
                   <img
