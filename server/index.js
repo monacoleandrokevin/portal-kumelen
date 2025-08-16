@@ -16,6 +16,7 @@ import { isAllowedByWorkspace } from "./lib/workspaceAccess.js";
 import { listAllowedUsers } from "./lib/workspaceAccess.js";
 import { checkAdmin } from "./middleware/checkAdmin.js";
 import usersRoutes from "./routes/users.js";
+import { google } from "googleapis";
 
 dotenv.config();
 
@@ -357,6 +358,71 @@ app.patch("/users/:id/metadata", checkAdmin, async (req, res) => {
     res.json({ message: "Metadatos actualizados", usuario: user });
   } catch {
     res.status(500).json({ message: "Error al actualizar metadatos" });
+  }
+});
+
+function _getJwt() {
+  const key = (process.env.GWS_SA_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+  return new google.auth.JWT(
+    process.env.GWS_SA_CLIENT_EMAIL,
+    undefined,
+    key,
+    [
+      "https://www.googleapis.com/auth/admin.directory.user.readonly",
+      "https://www.googleapis.com/auth/admin.directory.group.member.readonly",
+    ],
+    process.env.GWS_IMPERSONATE
+  );
+}
+
+// 1) Self-test: valida que el SA puede emitir credenciales y pegarle a Admin SDK
+app.get("/workspace/selftest", async (_req, res) => {
+  try {
+    const auth = _getJwt();
+    await auth.authorize(); // si falla, tira detalle claro
+    const admin = google.admin({ version: "directory_v1", auth });
+    // pedimos el admin impersonado para verificar que hay token válido
+    const { data } = await admin.users.get({
+      userKey: process.env.GWS_IMPERSONATE,
+      projection: "basic",
+    });
+    res.json({
+      ok: true,
+      impersonating: process.env.GWS_IMPERSONATE,
+      sampleUser: data?.primaryEmail || null,
+      orgUnitPath: data?.orgUnitPath || null,
+    });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      message: "Falla autenticación contra Admin SDK",
+      detail: e?.message || String(e),
+    });
+  }
+});
+
+// 2) Ver un usuario puntual (requiere que ya funcione selftest)
+app.get("/workspace/echo/:email", async (req, res) => {
+  try {
+    const auth = _getJwt();
+    await auth.authorize();
+    const admin = google.admin({ version: "directory_v1", auth });
+    const { data } = await admin.users.get({
+      userKey: String(req.params.email || "")
+        .trim()
+        .toLowerCase(),
+      projection: "basic",
+    });
+    res.json({
+      email: data?.primaryEmail,
+      orgUnitPath: data?.orgUnitPath,
+      name: data?.name?.fullName,
+    });
+  } catch (e) {
+    res.status(500).json({
+      message: "No se pudo obtener el usuario",
+      detail: e?.message || String(e),
+    });
   }
 });
 
