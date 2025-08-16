@@ -118,9 +118,14 @@ app.post("/auth/google", async (req, res) => {
       email = payload?.email;
       name = payload?.name || "";
     } else if (access_token) {
+      // Access token -> OIDC userinfo (más consistente que oauth2/v3)
       const { data } = await axios.get(
-        "https://www.googleapis.com/oauth2/v3/userinfo",
-        { headers: { Authorization: `Bearer ${access_token}` }, timeout: 8000 }
+        "https://openidconnect.googleapis.com/v1/userinfo",
+        {
+          headers: { Authorization: `Bearer ${access_token}` },
+          timeout: 8000,
+          // validateStatus: (s) => s < 500, // opcional: que 401/403 pasen al catch con response
+        }
       );
       email = data?.email;
       name = data?.name || data?.given_name || "";
@@ -179,8 +184,17 @@ app.post("/auth/google", async (req, res) => {
       rol: usuario.rol,
     });
   } catch (error) {
-    const msg = error?.response?.data || error?.message || "unknown";
-    return res.status(401).json({ message: "Token inválido", error: msg });
+    const errData = error?.response?.data;
+    const errMsg =
+      errData?.error_description ||
+      errData?.error ||
+      error?.message ||
+      "unknown";
+    console.error("× Error en /auth/google:", errMsg, errData || "");
+    return res.status(401).json({
+      message: "Token inválido",
+      error: errData || errMsg,
+    });
   }
 });
 
@@ -419,6 +433,25 @@ app.get("/workspace/echo/:email", async (req, res) => {
     res.status(500).json({
       message: "No se pudo obtener el usuario",
       detail: e?.message || String(e),
+    });
+  }
+});
+
+// Probar userinfo con un access_token enviado en el body (sólo en dev)
+app.post("/debug/userinfo", async (req, res) => {
+  try {
+    const at = req.body?.access_token;
+    if (!at) return res.status(400).json({ message: "Falta access_token" });
+
+    const { data } = await axios.get(
+      "https://openidconnect.googleapis.com/v1/userinfo",
+      { headers: { Authorization: `Bearer ${at}` }, timeout: 8000 }
+    );
+    res.json({ ok: true, data });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      detail: e?.response?.data || e?.message || String(e),
     });
   }
 });
