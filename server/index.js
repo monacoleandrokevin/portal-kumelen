@@ -1,6 +1,5 @@
-// server/index.js
-import express from "express";
 import cors from "cors";
+import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
@@ -20,7 +19,6 @@ import { google } from "googleapis";
 
 dotenv.config();
 
-// Requisitos mínimos de entorno
 const REQUIRED = [
   "MONGO_URI",
   "GOOGLE_CLIENT_ID",
@@ -33,7 +31,6 @@ if (missing.length) {
   process.exit(1);
 }
 
-// Mongo
 await mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Conectado a MongoDB Atlas"))
@@ -45,42 +42,51 @@ await mongoose
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// CORS (antes de helmet)
-const allowedOrigins = [
-  process.env.FRONTEND_URL, // ej: https://portal-kumelen.vercel.app
+const allowlist = [
+  process.env.FRONTEND_URL,
   "https://portal-kumelen.vercel.app",
   "http://localhost:5173",
 ].filter(Boolean);
 
-const corsCfg = {
+// permite previews de vercel.app
+const VERCEL_REGEX = /^https:\/\/[^.]+\.vercel\.app$/i;
+
+const corsOptions = {
   origin(origin, cb) {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error("Not allowed by CORS"));
+    if (!origin) return cb(null, true); // curl/healthchecks
+    const o = origin.trim();
+    const allowed = allowlist.includes(o) || VERCEL_REGEX.test(o);
+    return allowed
+      ? cb(null, true)
+      : cb(new Error(`CORS: origin no permitido → ${o}`));
   },
-  methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: false,
+  optionsSuccessStatus: 204,
 };
 
 const { Types } = mongoosePkg;
 
-app.use(cors(corsCfg));
-app.options("*", cors(corsCfg));
+app.use((req, res, next) => {
+  res.header("Vary", "Origin");
+  next();
+});
 
-// Helmet
+// Siempre antes de rutas
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
   })
 );
 
-// Body parser
 app.use(express.json({ limit: "1mb" }));
 
-// Healthcheck
 app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
 
-// Rate-limit auth
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,
@@ -89,19 +95,16 @@ const authLimiter = rateLimit({
 });
 app.use("/auth", authLimiter);
 
-// Rutas públicas/protegidas
 app.use("/users", usersRoutes);
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Login con Google → emite JWT propio
 app.post("/auth/google", async (req, res) => {
   const { token, access_token } = req.body || {};
   try {
     let email, name;
 
     if (token) {
-      // ID token → verificar firma
       const ticket = await googleClient.verifyIdToken({
         idToken: token,
         audience: process.env.GOOGLE_CLIENT_ID,
@@ -110,7 +113,6 @@ app.post("/auth/google", async (req, res) => {
       email = payload?.email;
       name = payload?.name || "";
     } else if (access_token) {
-      // Access token → OIDC userinfo (recomendado)
       const { data } = await axios.get(
         "https://openidconnect.googleapis.com/v1/userinfo",
         { headers: { Authorization: `Bearer ${access_token}` }, timeout: 8000 }
@@ -129,7 +131,6 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "No se pudo obtener el email desde Google" });
     }
 
-    // Dominio institucional (si lo usás)
     const emailNorm = String(email).trim().toLowerCase();
     const dominio = String(process.env.PERMITIDO_DOMINIO || "")
       .trim()
@@ -140,17 +141,13 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "Acceso denegado. Solo correos institucionales." });
     }
 
-    // Política de Workspace (OU / grupos)
     const okPolicy = await isAllowedByWorkspace(emailNorm);
     if (!okPolicy) {
-      return res
-        .status(403)
-        .json({
-          message: "Tu cuenta no tiene acceso (política de Workspace).",
-        });
+      return res.status(403).json({
+        message: "Tu cuenta no tiene acceso (política de Workspace).",
+      });
     }
 
-    // Alta/lookup de usuario propio
     let usuario = await User.findOne({ email: emailNorm });
     if (!usuario) {
       const ya = await Autorizado.findOne({ email: emailNorm });
@@ -166,7 +163,6 @@ app.post("/auth/google", async (req, res) => {
       });
     }
 
-    // Emitir sesión propia (JWT) – evita revalidar con Google en cada request
     const sessionToken = jwt.sign(
       { sub: String(usuario._id), email: usuario.email, role: usuario.rol },
       process.env.JWT_SECRET,
@@ -183,7 +179,6 @@ app.post("/auth/google", async (req, res) => {
     const src = error?.response?.config?.url || "";
     const body = error?.response?.data;
 
-    // Si falla userinfo OIDC → token de Google inválido/expirado
     if (src.includes("openidconnect.googleapis.com")) {
       return res.status(401).json({
         message: "Token inválido",
@@ -227,7 +222,6 @@ app.patch("/users/:id/rol", checkAdmin, async (req, res) => {
   }
 });
 
-// Actualizar vínculos
 app.patch("/users/:id/vinculos", checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -254,7 +248,6 @@ app.patch("/users/:id/vinculos", checkAdmin, async (req, res) => {
   }
 });
 
-// CRUD Autorizados
 app.get("/autorizados", checkAdmin, async (_req, res) => {
   try {
     const lista = await Autorizado.find({}, "-__v");
@@ -266,7 +259,7 @@ app.get("/autorizados", checkAdmin, async (_req, res) => {
 
 app.get("/workspace/usuarios", checkAdmin, async (_req, res) => {
   try {
-    const lista = await listAllowedUsers(); // [{ email, name, orgUnitPath }]
+    const lista = await listAllowedUsers();
     res.json(lista);
   } catch (e) {
     res.status(500).json({ message: "Error al listar usuarios de Workspace" });
@@ -328,7 +321,6 @@ app.post("/workspace/sync", checkAdmin, async (_req, res) => {
         await User.create({ nombre, email, rol: "empleado" });
         created++;
       } else {
-        // actualizá nombre si querés mantener sincronizado
         if (found.nombre !== nombre) {
           found.nombre = nombre;
           await found.save();
@@ -386,13 +378,11 @@ function _getJwt() {
   );
 }
 
-// 1) Self-test: valida que el SA puede emitir credenciales y pegarle a Admin SDK
 app.get("/workspace/selftest", async (_req, res) => {
   try {
     const auth = _getJwt();
-    await auth.authorize(); // si falla, tira detalle claro
+    await auth.authorize();
     const admin = google.admin({ version: "directory_v1", auth });
-    // pedimos el admin impersonado para verificar que hay token válido
     const { data } = await admin.users.get({
       userKey: process.env.GWS_IMPERSONATE,
       projection: "basic",
@@ -412,7 +402,6 @@ app.get("/workspace/selftest", async (_req, res) => {
   }
 });
 
-// 2) Ver un usuario puntual (requiere que ya funcione selftest)
 app.get("/workspace/echo/:email", async (req, res) => {
   try {
     const auth = _getJwt();
@@ -437,7 +426,6 @@ app.get("/workspace/echo/:email", async (req, res) => {
   }
 });
 
-// Probar userinfo con un access_token enviado en el body (sólo en dev)
 app.post("/debug/userinfo", async (req, res) => {
   try {
     const at = req.body?.access_token;
