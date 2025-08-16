@@ -12,28 +12,11 @@ export default function Landing() {
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
 
-  // Ping para despertar el server (Render) antes del login
-  async function warmup() {
-    try {
-      await axios.get(`${API}/health`, { timeout: 4000 });
-    } catch (err) {
-      if (import.meta.env.DEV) {
-        console.debug(
-          "Warmup falló (normal si server está dormido):",
-          err?.message
-        );
-      }
-      // no-op
-    }
-  }
-
-  const doLogin = async (accessToken) => {
+  async function doLogin(accessToken) {
     try {
       setLoading(true);
-      await warmup();
-
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 30000); // 30s primer hit
+      const t = setTimeout(() => controller.abort(), 30000);
 
       const { data } = await axios.post(
         `${API}/auth/google`,
@@ -42,16 +25,12 @@ export default function Landing() {
       );
       clearTimeout(t);
 
-      // Backend devuelve { nombre, email, rol, token? }
-      // Usá tu JWT si viene; si no, caé al access_token de Google (fallback temporal).
       const sessionToken = data.token || accessToken;
-
       authLogin({
         name: data.nombre || "",
-        role: data.rol, // backend usa 'rol'
-        token: sessionToken, // se guarda como session_token
+        role: data.rol,
+        token: sessionToken,
       });
-
       navigate("/inicio", { replace: true });
     } catch (err) {
       const isAbort =
@@ -68,23 +47,7 @@ export default function Landing() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (t) => {
-      // 1) Preferimos access_token
-      if (t?.access_token) return doLogin(t.access_token);
-
-      // 2) Fallback: id_token (distintas libs lo exponen como credential / id_token / code)
-      const idt = t?.credential || t?.id_token || t?.code;
-      if (idt) return doLoginWithIdToken(idt);
-
-      alert("No se obtuvo token de Google. Reintentá.");
-    },
-    onError: () => alert("Error en el login"),
-    scope: "openid email profile",
-    flow: "implicit",
-  });
+  }
 
   async function doLoginWithIdToken(idToken) {
     try {
@@ -94,7 +57,7 @@ export default function Landing() {
 
       const { data } = await axios.post(
         `${API}/auth/google`,
-        { token: idToken }, // << usa la rama 'token' (ID token) en el backend
+        { token: idToken }, // ← rama ID token en el backend
         { signal: controller.signal, timeout: 30000 }
       );
       clearTimeout(t);
@@ -123,37 +86,61 @@ export default function Landing() {
     }
   }
 
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (t) => {
+      console.debug("OAuth payload:", t); // verificá qué llega
+      const at = t?.access_token;
+      if (at) return doLogin(at);
+
+      // fallback para credenciales alternativas
+      const idt = t?.credential || t?.id_token || t?.code;
+      if (idt) return doLoginWithIdToken(idt);
+
+      alert("No se obtuvo token de Google. Reintentá.");
+    },
+    onError: () => alert("Error en el login"),
+    scope: "openid email profile",
+    flow: "implicit", // token flow
+    // ux_mode: "popup" // (default)
+  });
+
   return (
-    <main className="landing">
-      <div className="landing__wrap">
-        <div className="login-card w-100" style={{ maxWidth: 420 }}>
-          <div className="brand mb-4 text-center">
-            <div className="logo-circle">
-              <img
-                src="https://res.cloudinary.com/dzxsbydje/image/upload/v1754348808/logo_kumelen_centrado_-_fondo_transparente_uuc5wb.png"
-                alt="Escuela Kumelen"
-              />
+    <main className="landing d-flex min-vh-100">
+      <div className="container-fluid">
+        <div className="row g-0 min-vh-100">
+          <div className="col-12 d-flex align-items-center justify-content-center p-4 p-md-5">
+            <div className="login-card w-100" style={{ maxWidth: 480 }}>
+              <div className="brand mb-4 text-center">
+                <div className="logo-circle">
+                  <img
+                    src="https://res.cloudinary.com/dzxsbydje/image/upload/v1754348808/logo_kumelen_centrado_-_fondo_transparente_uuc5wb.png"
+                    alt="Escuela Kumelen"
+                  />
+                </div>
+                <h1 className="h4 mt-3 mb-1">
+                  Accedé con tu cuenta institucional
+                </h1>
+              </div>
+
+              <button
+                className="btn login-google-btn w-100 py-2"
+                onClick={() => googleLogin()}
+                disabled={loading}
+              >
+                {loading ? (
+                  "Iniciando..."
+                ) : (
+                  <>
+                    <span className="me-2">🔒</span> Iniciar sesión con Google
+                  </>
+                )}
+              </button>
+
+              <p className="text-muted small mt-4 mb-0 text-center">
+                © {new Date().getFullYear()} Escuela Kumelen
+              </p>
             </div>
-            <h1 className="h4 mt-3 mb-1">Accedé con tu cuenta institucional</h1>
           </div>
-
-          <button
-            className="w-100 py-2 login-google-btn"
-            onClick={() => googleLogin()}
-            disabled={loading}
-          >
-            {loading ? (
-              "Iniciando..."
-            ) : (
-              <>
-                <span className="me-2">🔒</span> Iniciar sesión con Google
-              </>
-            )}
-          </button>
-
-          <p className="text-muted small mt-4 mb-0 text-center">
-            © {new Date().getFullYear()} Escuela Kumelen
-          </p>
         </div>
       </div>
     </main>

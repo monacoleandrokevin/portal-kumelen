@@ -105,6 +105,7 @@ app.post("/auth/google", async (req, res) => {
   if (access_token && typeof access_token !== "string") {
     return res.status(400).json({ message: "access_token inválido" });
   }
+
   try {
     let email, name;
 
@@ -117,13 +118,9 @@ app.post("/auth/google", async (req, res) => {
       email = payload?.email;
       name = payload?.name || "";
     } else if (access_token) {
-      // Access token -> /userinfo
       const { data } = await axios.get(
         "https://www.googleapis.com/oauth2/v3/userinfo",
-        {
-          headers: { Authorization: `Bearer ${access_token}` },
-          timeout: 8000, // opcional
-        }
+        { headers: { Authorization: `Bearer ${access_token}` }, timeout: 8000 }
       );
       email = data?.email;
       name = data?.name || data?.given_name || "";
