@@ -40,6 +40,8 @@ await mongoose
   });
 
 const app = express();
+app.set("trust proxy", 1);
+
 const PORT = process.env.PORT || 4000;
 
 // --- CORS explícito + logger ---
@@ -199,20 +201,28 @@ app.post("/auth/google", async (req, res) => {
       rol: usuario.rol,
       token: sessionToken,
     });
-  } catch (error) {
-    const src = error?.response?.config?.url || "";
-    const body = error?.response?.data;
+  } catch (err) {
+    const src =
+      err?.config?.url ??
+      err?.response?.config?.url ??
+      err?.response?.request?.res?.responseUrl ??
+      err?.response?.request?.socket?.servername ??
+      "";
 
-    if (src.includes("openidconnect.googleapis.com")) {
-      return res.status(401).json({
-        message: "Token inválido",
-        error: body || error.message || "oidc_userinfo_failed",
+    const srcStr = String(src); // <- fuerza string
+
+    if (srcStr.includes("openidconnect.googleapis.com")) {
+      // mensaje específico, por ejemplo:
+      return res.status(503).json({
+        message: "Falla consultando OpenID userinfo",
+        error: "Servicio de Google momentáneamente no disponible",
       });
     }
 
-    return res.status(500).json({
-      message: "Error en autenticación",
-      error: body || error.message || "unknown",
+    // fallback genérico
+    return res.status(401).json({
+      message: "Token inválido",
+      error: err?.response?.data || err?.message || "unknown",
     });
   }
 });
