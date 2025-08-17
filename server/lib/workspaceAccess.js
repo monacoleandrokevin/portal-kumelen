@@ -38,7 +38,7 @@ export async function isMemberOfGroup(email, groupKey) {
 }
 
 export async function isAllowedByWorkspace(email) {
-  const ouConf = (process.env.ALLOWED_OU || "").trim();
+  const ouConf = (process.env.GWS_ALLOWED_OUS || "").trim();
   const groupConf = (process.env.ACCESS_GROUP || "").trim();
 
   // OU
