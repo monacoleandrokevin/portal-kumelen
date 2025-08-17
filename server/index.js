@@ -42,28 +42,41 @@ await mongoose
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// === CORS explícito y robusto ===
+// --- CORS explícito + logger ---
 const ALLOWLIST = [
-  (process.env.FRONTEND_URL || "").trim().replace(/\/$/, "").toLowerCase(), // ej: https://portal-kumelen.vercel.app
-  "https://portal-kumelen.vercel.app",
+  (process.env.FRONTEND_URL || "").trim().replace(/\/$/, "").toLowerCase(),
   "http://localhost:5173",
+  "https://portal-kumelen.vercel.app",
 ].filter(Boolean);
 
-// Permitir previews de Vercel como https://xxx.vercel.app
+// Permitir previews de Vercel (si no querés previews, comentá esta línea).
 const VERCEL_PREVIEW = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
 
 function isAllowedOrigin(origin) {
-  if (!origin) return true; // curl/healthchecks
+  if (!origin) return true; // curl/health checks
   const o = String(origin).trim().replace(/\/$/, "").toLowerCase();
   return ALLOWLIST.includes(o) || VERCEL_PREVIEW.test(o);
 }
 
-function corsExplicit(req, res, next) {
+// LOG de decisión de CORS (quitá esto cuando termine el debug)
+app.use((req, res, next) => {
+  const origin = req.headers.origin || "";
+  const decision = isAllowedOrigin(origin) ? "ALLOW" : "BLOCK";
+  console.log(
+    `[CORS] ${req.method} ${req.path} | Origin=${origin || "-"} | ${decision}`
+  );
+  next();
+});
+
+// Middleware CORS explícito (SIEMPRE antes de cualquier ruta)
+app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (isAllowedOrigin(origin)) {
-    // Para caches/CDN
-    res.setHeader("Vary", "Origin");
-    // Headers CORS siempre que el origin sea válido
+  const allowed = isAllowedOrigin(origin);
+
+  // Para caches/CDN
+  res.setHeader("Vary", "Origin");
+
+  if (allowed) {
     res.setHeader("Access-Control-Allow-Origin", origin || "*");
     res.setHeader(
       "Access-Control-Allow-Methods",
@@ -73,30 +86,18 @@ function corsExplicit(req, res, next) {
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization"
     );
-    // Si no usás cookies/sessions entre dominios, NO expongas credentials
+    // Si no usás cookies cross-site, NO habilites credentials.
     // res.setHeader("Access-Control-Allow-Credentials", "true");
   }
 
   if (req.method === "OPTIONS") {
-    // Si origin no es válido, devolvemos 403; si es válido, 204.
-    return isAllowedOrigin(origin) ? res.sendStatus(204) : res.sendStatus(403);
+    return res.sendStatus(allowed ? 204 : 403);
   }
-  // Si no es válido y no es OPTIONS, cortamos acá
-  if (!isAllowedOrigin(origin)) {
+  if (!allowed) {
     return res
       .status(403)
       .json({ message: `CORS: origin no permitido → ${origin || "-"}` });
   }
-  return next();
-}
-
-// MONTA PRIMERO
-app.use(corsExplicit);
-
-const { Types } = mongoosePkg;
-
-app.use((req, res, next) => {
-  res.header("Vary", "Origin");
   next();
 });
 
