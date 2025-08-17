@@ -6,7 +6,6 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import axios from "axios";
 import mongoose from "mongoose";
-import mongoosePkg from "mongoose";
 import { OAuth2Client } from "google-auth-library";
 
 import { User } from "./models/User.js";
@@ -16,6 +15,7 @@ import { listAllowedUsers } from "./lib/workspaceAccess.js";
 import { checkAdmin } from "./middleware/checkAdmin.js";
 import usersRoutes from "./routes/users.js";
 import { google } from "googleapis";
+import { Types } from "mongoose";
 
 dotenv.config();
 
