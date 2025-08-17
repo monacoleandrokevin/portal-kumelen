@@ -16,6 +16,8 @@ import { checkAdmin } from "./middleware/checkAdmin.js";
 import usersRoutes from "./routes/users.js";
 import { google } from "googleapis";
 
+import { workspaceSelfTest } from "./services/workspace.js";
+
 dotenv.config();
 
 const REQUIRED = [
@@ -423,6 +425,15 @@ app.post("/debug/userinfo", async (req, res) => {
       ok: false,
       detail: e?.response?.data || e?.message || String(e),
     });
+  }
+});
+
+app.get("/workspace/selftest", async (_req, res) => {
+  try {
+    const info = await workspaceSelfTest();
+    res.json({ ok: true, ...info });
+  } catch (e) {
+    res.status(500).json({ ok: false, detail: e?.message || String(e) });
   }
 });
 

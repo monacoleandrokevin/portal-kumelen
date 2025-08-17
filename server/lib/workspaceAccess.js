@@ -68,7 +68,7 @@ export async function listAllowedUsers() {
   const auth = getJwt();
   const admin = google.admin({ version: "directory_v1", auth });
 
-  const ouConf = (process.env.ALLOWED_OU || "").trim();
+  const ouConf = (process.env.GWS_ALLOWED_OUS || "").trim();
   const groupConf = (process.env.ACCESS_GROUP || "").trim();
 
   const out = new Map(); // email -> { email, name, orgUnitPath }
