@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import axios from "axios";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { OAuth2Client } from "google-auth-library";
 
 import { User } from "./models/User.js";
@@ -15,7 +15,6 @@ import { listAllowedUsers } from "./lib/workspaceAccess.js";
 import { checkAdmin } from "./middleware/checkAdmin.js";
 import usersRoutes from "./routes/users.js";
 import { google } from "googleapis";
-import { Types } from "mongoose";
 
 dotenv.config();
 
@@ -31,6 +30,7 @@ if (missing.length) {
   process.exit(1);
 }
 
+// Conexión a Mongo
 await mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Conectado a MongoDB Atlas"))
@@ -40,44 +40,32 @@ await mongoose
   });
 
 const app = express();
-app.set("trust proxy", 1);
+app.set("trust proxy", 1); // necesario en Render/Proxies
 
 const PORT = process.env.PORT || 4000;
 
-// --- CORS explícito + logger ---
+// --- CORS explícito ---
 const ALLOWLIST = [
   (process.env.FRONTEND_URL || "").trim().replace(/\/$/, "").toLowerCase(),
   "http://localhost:5173",
   "https://portal-kumelen.vercel.app",
 ].filter(Boolean);
 
-// Permitir previews de Vercel (si no querés previews, comentá esta línea).
+// Permitir previews de Vercel (*.vercel.app)
 const VERCEL_PREVIEW = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
 
 function isAllowedOrigin(origin) {
-  if (!origin) return true; // curl/health checks
+  if (!origin) return true; // health checks / curl
   const o = String(origin).trim().replace(/\/$/, "").toLowerCase();
   return ALLOWLIST.includes(o) || VERCEL_PREVIEW.test(o);
 }
 
-// LOG de decisión de CORS (quitá esto cuando termine el debug)
-app.use((req, res, next) => {
-  const origin = req.headers.origin || "";
-  const decision = isAllowedOrigin(origin) ? "ALLOW" : "BLOCK";
-  console.log(
-    `[CORS] ${req.method} ${req.path} | Origin=${origin || "-"} | ${decision}`
-  );
-  next();
-});
-
-// Middleware CORS explícito (SIEMPRE antes de cualquier ruta)
+// Middleware CORS (antes de rutas)
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowed = isAllowedOrigin(origin);
 
-  // Para caches/CDN
   res.setHeader("Vary", "Origin");
-
   if (allowed) {
     res.setHeader("Access-Control-Allow-Origin", origin || "*");
     res.setHeader(
@@ -88,7 +76,7 @@ app.use((req, res, next) => {
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization"
     );
-    // Si no usás cookies cross-site, NO habilites credentials.
+    // Si no usás cookies cross-site, no habilites credentials.
     // res.setHeader("Access-Control-Allow-Credentials", "true");
   }
 
@@ -113,6 +101,7 @@ app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
 
+// Rate limit para /auth
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,
@@ -121,16 +110,20 @@ const authLimiter = rateLimit({
 });
 app.use("/auth", authLimiter);
 
+// Rutas de usuarios
 app.use("/users", usersRoutes);
 
+// Google client para verificar ID token
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+// Login: acepta ID token (token) o access_token
 app.post("/auth/google", async (req, res) => {
   const { token, access_token } = req.body || {};
   try {
     let email, name;
 
     if (token) {
+      // ID token
       const ticket = await googleClient.verifyIdToken({
         idToken: token,
         audience: process.env.GOOGLE_CLIENT_ID,
@@ -139,6 +132,7 @@ app.post("/auth/google", async (req, res) => {
       email = payload?.email;
       name = payload?.name || "";
     } else if (access_token) {
+      // Access token -> userinfo
       const { data } = await axios.get(
         "https://openidconnect.googleapis.com/v1/userinfo",
         { headers: { Authorization: `Bearer ${access_token}` }, timeout: 8000 }
@@ -157,6 +151,7 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "No se pudo obtener el email desde Google" });
     }
 
+    // Dominio institucional
     const emailNorm = String(email).trim().toLowerCase();
     const dominio = String(process.env.PERMITIDO_DOMINIO || "")
       .trim()
@@ -167,6 +162,7 @@ app.post("/auth/google", async (req, res) => {
         .json({ message: "Acceso denegado. Solo correos institucionales." });
     }
 
+    // Política de Workspace (OU). Usa Service Account + DWD (impersonación).
     const okPolicy = await isAllowedByWorkspace(emailNorm);
     if (!okPolicy) {
       return res.status(403).json({
@@ -174,8 +170,10 @@ app.post("/auth/google", async (req, res) => {
       });
     }
 
+    // Crear / obtener usuario local
     let usuario = await User.findOne({ email: emailNorm });
     if (!usuario) {
+      // si querés mantener la lista blanca adicional:
       const ya = await Autorizado.findOne({ email: emailNorm });
       if (!ya) {
         return res
@@ -189,6 +187,7 @@ app.post("/auth/google", async (req, res) => {
       });
     }
 
+    // Emitimos JWT propio (más rápido y seguro para el resto de endpoints)
     const sessionToken = jwt.sign(
       { sub: String(usuario._id), email: usuario.email, role: usuario.rol },
       process.env.JWT_SECRET,
@@ -202,24 +201,21 @@ app.post("/auth/google", async (req, res) => {
       token: sessionToken,
     });
   } catch (err) {
+    // Si falla Google userinfo, devolvemos mensaje claro
     const src =
       err?.config?.url ??
       err?.response?.config?.url ??
       err?.response?.request?.res?.responseUrl ??
       err?.response?.request?.socket?.servername ??
       "";
-
-    const srcStr = String(src); // <- fuerza string
+    const srcStr = String(src);
 
     if (srcStr.includes("openidconnect.googleapis.com")) {
-      // mensaje específico, por ejemplo:
       return res.status(503).json({
         message: "Falla consultando OpenID userinfo",
         error: "Servicio de Google momentáneamente no disponible",
       });
     }
-
-    // fallback genérico
     return res.status(401).json({
       message: "Token inválido",
       error: err?.response?.data || err?.message || "unknown",
@@ -227,12 +223,14 @@ app.post("/auth/google", async (req, res) => {
   }
 });
 
-app.patch("/autorizados/:id", checkAdmin, async (req, res) => {
+// Bloqueo de uso incorrecto del PATCH /autorizados/:id
+app.patch("/autorizados/:id", checkAdmin, async (_req, res) => {
   return res.status(405).json({
     message: "Usá POST /autorizados para crear o DELETE para eliminar.",
   });
 });
 
+// Admin: rol
 app.patch("/users/:id/rol", checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -256,6 +254,7 @@ app.patch("/users/:id/rol", checkAdmin, async (req, res) => {
   }
 });
 
+// Admin: vínculos
 app.patch("/users/:id/vinculos", checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -282,6 +281,7 @@ app.patch("/users/:id/vinculos", checkAdmin, async (req, res) => {
   }
 });
 
+// Admin: lista blanca
 app.get("/autorizados", checkAdmin, async (_req, res) => {
   try {
     const lista = await Autorizado.find({}, "-__v");
@@ -291,15 +291,17 @@ app.get("/autorizados", checkAdmin, async (_req, res) => {
   }
 });
 
+// Admin: listar usuarios desde Workspace (si usás import masivo)
 app.get("/workspace/usuarios", checkAdmin, async (_req, res) => {
   try {
     const lista = await listAllowedUsers();
     res.json(lista);
-  } catch (e) {
+  } catch {
     res.status(500).json({ message: "Error al listar usuarios de Workspace" });
   }
 });
 
+// Admin: crear/quitar de la lista blanca
 app.post("/autorizados", checkAdmin, async (req, res) => {
   try {
     const emailNorm = String(req.body?.email || "")
@@ -341,63 +343,7 @@ app.delete("/autorizados/:id", checkAdmin, async (req, res) => {
   }
 });
 
-app.post("/workspace/sync", checkAdmin, async (_req, res) => {
-  try {
-    const lista = await listAllowedUsers();
-    let created = 0,
-      updated = 0;
-
-    for (const u of lista) {
-      const email = u.email.toLowerCase().trim();
-      const nombre = u.name || email;
-      const found = await User.findOne({ email });
-      if (!found) {
-        await User.create({ nombre, email, rol: "empleado" });
-        created++;
-      } else {
-        if (found.nombre !== nombre) {
-          found.nombre = nombre;
-          await found.save();
-          updated++;
-        }
-      }
-    }
-
-    res.json({ message: "Sync OK", created, updated, total: lista.length });
-  } catch (e) {
-    res.status(500).json({ message: "Error al sincronizar usuarios" });
-  }
-});
-
-app.patch("/users/:id/metadata", checkAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { edificios, niveles } = req.body || {};
-
-    if (!Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "id inválido" });
-    }
-    if (edificios && !Array.isArray(edificios)) {
-      return res.status(422).json({ message: "edificios debe ser array" });
-    }
-    if (niveles && !Array.isArray(niveles)) {
-      return res.status(422).json({ message: "niveles debe ser array" });
-    }
-
-    const update = {};
-    if (edificios) update.edificios = edificios.map(String);
-    if (niveles) update.niveles = niveles.map(String);
-
-    const user = await User.findByIdAndUpdate(id, update, { new: true });
-    if (!user)
-      return res.status(404).json({ message: "Usuario no encontrado" });
-
-    res.json({ message: "Metadatos actualizados", usuario: user });
-  } catch {
-    res.status(500).json({ message: "Error al actualizar metadatos" });
-  }
-});
-
+// -- Self-tests útiles (podés quitarlos luego) --
 function _getJwt() {
   const key = (process.env.GWS_SA_PRIVATE_KEY || "").replace(/\\n/g, "\n");
   return new google.auth.JWT(
@@ -406,7 +352,8 @@ function _getJwt() {
     key,
     [
       "https://www.googleapis.com/auth/admin.directory.user.readonly",
-      "https://www.googleapis.com/auth/admin.directory.group.member.readonly",
+      "https://www.googleapis.com/auth.admin.directory.orgunit.readonly",
+      "https://www.googleapis.com/auth/admin.directory.group.readonly",
     ],
     process.env.GWS_IMPERSONATE
   );
@@ -460,6 +407,7 @@ app.get("/workspace/echo/:email", async (req, res) => {
   }
 });
 
+// Debug opcional: inspeccionar un access_token del front
 app.post("/debug/userinfo", async (req, res) => {
   try {
     const at = req.body?.access_token;
