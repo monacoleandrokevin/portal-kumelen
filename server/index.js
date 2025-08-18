@@ -16,8 +16,6 @@ import { checkAdmin } from "./middleware/checkAdmin.js";
 import usersRoutes from "./routes/users.js";
 import { google } from "googleapis";
 
-import { workspaceSelfTest } from "./services/workspace.js";
-
 dotenv.config();
 
 const REQUIRED = [
