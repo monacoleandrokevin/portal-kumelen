@@ -437,4 +437,23 @@ app.get("/workspace/selftest", async (_req, res) => {
   }
 });
 
+app.get("/workspace/token-check", async (_req, res) => {
+  try {
+    const auth = new google.auth.JWT(
+      process.env.GWS_SA_CLIENT_EMAIL,
+      undefined,
+      (process.env.GWS_SA_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+      [
+        "https://www.googleapis.com/auth/admin.directory.user.readonly",
+        "https://www.googleapis.com/auth/admin.directory.orgunit.readonly",
+      ],
+      process.env.GWS_IMPERSONATE
+    );
+    const r = await auth.authorize();
+    res.json({ ok: true, tokenType: r.token_type, expiry: r.expiry_date });
+  } catch (e) {
+    res.status(500).json({ ok: false, detail: e?.message || String(e) });
+  }
+});
+
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
