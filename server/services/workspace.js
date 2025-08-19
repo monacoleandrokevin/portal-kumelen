@@ -29,13 +29,59 @@ function getJWT() {
   });
 }
 
-// Lee allowed OUs desde env (acepta GWS_ALLOWED_OUS o ALLOWED_OU legacy)
+// --- helpers OU ---
+function normalizeOU(p) {
+  // recorta, fuerza "/" inicial, colapsa dobles "//", quita "/" final, lowercase
+  let s = String(p || "").trim();
+  if (!s) return null;
+  if (!s.startsWith("/")) s = "/" + s;
+  s = s.replace(/\/+/g, "/").replace(/\/$/, "").toLowerCase();
+  return s;
+}
+
+// Lee allowed OUs desde env: admite GWS_ALLOWED_OUS (coma) o ALLOWED_OU
 function getAllowedOUs() {
-  const raw = process.env.GWS_ALLOWED_OUS || process.env.ALLOWED_OU || "";
-  return raw
+  const raw =
+    process.env.GWS_ALLOWED_OUS ??
+    process.env.ALLOWED_OU ?? // compatibilidad con tu setting previo
+    "";
+  return String(raw)
     .split(",")
-    .map((s) => s.trim())
+    .map((s) => normalizeOU(s))
     .filter(Boolean);
+}
+
+export async function isAllowedByWorkspace(email) {
+  const auth = getJWT();
+  const admin = google.admin({ version: "directory_v1", auth });
+
+  const { data: user } = await admin.users.get({
+    userKey: email,
+    projection: "full",
+  });
+
+  const orgUnitPath = normalizeOU(user.orgUnitPath || "/");
+  const allowedOUs = getAllowedOUs();
+
+  // Si no configuraste OUs, no bloqueamos por OU
+  if (allowedOUs.length === 0) return true;
+
+  // Match exacto o estar dentro (sub-OU)
+  const ok = allowedOUs.some(
+    (base) => orgUnitPath === base || orgUnitPath.startsWith(base + "/")
+  );
+
+  // Log útil solo fuera de producción
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[Workspace OU policy]", {
+      email,
+      orgUnitPath,
+      allowedOUs,
+      result: ok ? "ALLOW" : "DENY",
+    });
+  }
+
+  return ok;
 }
 
 /**
