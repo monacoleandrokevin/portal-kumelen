@@ -39,6 +39,7 @@ await mongoose
   });
 
 const app = express();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 4000;
 
 // CORS (antes de helmet)
@@ -65,6 +66,7 @@ app.options("*", cors(corsCfg));
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }, // ← clave para Google popup
   })
 );
 
@@ -173,11 +175,9 @@ import mongoosePkg from "mongoose";
 const { Types } = mongoosePkg;
 
 app.patch("/autorizados/:id", checkAdmin, async (req, res) => {
-  return res
-    .status(405)
-    .json({
-      message: "Usá POST /autorizados para crear o DELETE para eliminar.",
-    });
+  return res.status(405).json({
+    message: "Usá POST /autorizados para crear o DELETE para eliminar.",
+  });
 });
 
 app.patch("/users/:id/rol", checkAdmin, async (req, res) => {
