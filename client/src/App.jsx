@@ -10,7 +10,15 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import ShellLayout from "./layouts/ShellLayout";
 
+import { useEffect } from "react";
+import { warmup } from "./utils/warmup";
+
+const API = import.meta.env.VITE_API_URL;
+
 export default function App() {
+  useEffect(() => {
+    warmup(API);
+  }, []);
   return (
     <AuthProvider>
       <Routes>
