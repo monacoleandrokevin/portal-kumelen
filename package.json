@@ -1,0 +1,20 @@
+{
+  "name": "portal-kumelen",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:server": "pnpm --filter server dev",
+    "dev:client": "pnpm --filter client dev",
+    "dev": "concurrently -k \"pnpm dev:server\" \"pnpm dev:client\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

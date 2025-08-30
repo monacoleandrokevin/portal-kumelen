@@ -1,0 +1,29 @@
+# dependencias
+node_modules/
+**/node_modules/
+
+# builds y caches
+dist/
+build/
+.next/
+.vercel/
+coverage/
+
+# envs y secretos
+.env
+.env.*
+**/.env
+**/.env.*
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# sistema/IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
