@@ -103,9 +103,7 @@ router.post("/google", async (req, res) => {
       user: {
         id: usuario._id.toString(),
         email: usuario.email,
-        name: usuario.name, // nuevo
-        displayName: usuario.name, // compat client
-        nombre: usuario.name, // compat client (si antes usabas 'nombre')
+        name: usuario.name,
         role: usuario.role,
         picture: usuario.picture,
       },
@@ -149,9 +147,7 @@ router.post("/login/dev", async (req, res) => {
     user: {
       id: usuario._id.toString(),
       email: usuario.email,
-      name: usuario.name, // nuevo
-      displayName: usuario.name, // compat client
-      nombre: usuario.name, // compat client (si antes usabas 'nombre')
+      name: usuario.name,
       role: usuario.role,
       picture: usuario.picture,
     },
