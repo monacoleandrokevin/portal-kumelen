@@ -6,7 +6,6 @@ import authRouter from "../modules/auth/auth.routes.js";
 
 export const router = Router();
 
-// ✅ Alias de salud para el front (evita 404 en /api/health)
 router.get("/health", (req, res) => {
   res.json({ ok: true, uptime: process.uptime() });
 });

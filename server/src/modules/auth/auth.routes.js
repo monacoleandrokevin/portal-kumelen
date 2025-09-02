@@ -69,15 +69,19 @@ router.post("/google", async (req, res) => {
 
     // Upsert de usuario
     let usuario = await User.findOne({ email });
+
     if (!usuario) {
+      const isFirst = (await User.countDocuments()) === 0;
+      const initialRole = isFirst ? "admin" : "viewer";
+
       usuario = await User.create({
         email,
         name: name || email.split("@")[0],
         picture: picture || "",
-        role: "viewer", // por defecto (ajustable desde panel admin)
+        role: initialRole,
       });
     } else {
-      // Opcional: refrescar name/picture si vienen de Google
+      // ⚠️ NO tocar role si ya existe
       const updates = {};
       if (name && name !== usuario.name) updates.name = name;
       if (picture && picture !== usuario.picture) updates.picture = picture;
@@ -103,7 +107,10 @@ router.post("/google", async (req, res) => {
       user: {
         id: usuario._id.toString(),
         email: usuario.email,
+        // 👇 mandamos todas las variantes por compat con el client actual
         name: usuario.name,
+        displayName: usuario.name,
+        nombre: usuario.name,
         role: usuario.role,
         picture: usuario.picture,
       },
@@ -147,7 +154,10 @@ router.post("/login/dev", async (req, res) => {
     user: {
       id: usuario._id.toString(),
       email: usuario.email,
+      // 👇 mandamos todas las variantes por compat con el client actual
       name: usuario.name,
+      displayName: usuario.name,
+      nombre: usuario.name,
       role: usuario.role,
       picture: usuario.picture,
     },

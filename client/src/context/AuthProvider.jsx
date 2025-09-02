@@ -17,11 +17,16 @@ export default function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(() => {
-    const login = ({ name, role, token }) => {
-      if (token) localStorage.setItem("session_token", token);
-      if (name) localStorage.setItem("usuario_nombre", name);
-      if (role) localStorage.setItem("usuario_rol", role);
-      setUser({ name: name || "", role });
+    // dentro de AuthProvider.jsx
+    const login = ({ token, user }) => {
+      const nombre =
+        user?.displayName || user?.nombre || user?.name || user?.email || "";
+
+      localStorage.setItem("session_token", token);
+      localStorage.setItem("usuario_rol", user?.role || "viewer");
+      localStorage.setItem("usuario_nombre", nombre);
+
+      setUser({ name: nombre, role: user?.role || "viewer" });
     };
 
     const logout = () => {
